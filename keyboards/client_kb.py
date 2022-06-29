@@ -1,78 +1,132 @@
-from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, 
-                           InlineKeyboardMarkup, InlineKeyboardButton)
+# -*- coding: utf-8 -*-
+import typing
+
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.callback_data import CallbackData
+
+
+### Стартовая клавиатура
+class StartMenu (InlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__(row_width=2)
+        self.auth  = InlineKeyboardButton('🔑 Авторизация', 
+                     callback_data=self.CallbackData.START_CB.new(LEVEL=1, ACTION="AUTH"))
+        self.tasks = InlineKeyboardButton('📓 Задачи', 
+                     callback_data=self.CallbackData.START_CB.new(LEVEL=1, ACTION="SHOWTASKS"))
+        
+        self.add(self.auth, self.tasks)
+        
+    class CallbackData:
+        START_CB = CallbackData("START", "LEVEL", "ACTION")
+
+
+### Фильтры
+class FiltersMenu(InlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__(row_width=2)
+        self.full  = InlineKeyboardButton('📓 Все задачи', 
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL", PAGE=0))
+        self.user  = InlineKeyboardButton('👤 Мои задачи', 
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="USER", PAGE=0))
+        self.free  = InlineKeyboardButton('📗 Свободные', 
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FREE", PAGE=0))
+        self.past  = InlineKeyboardButton('📕 Просроченные', 
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="PAST", PAGE=0))
+        self.back  = InlineKeyboardButton('◀️ Назад', 
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="BACK", PAGE=0))
+        
+        self.add(self.full, self.user, self.free, self.past).add(self.back)
+
+    
+    class CallbackData:
+        FILTER_CB = CallbackData("FILTER", "LEVEL", "ACTION", 'PAGE')
+
+
+### Список задач
+class TasksMenu(InlineKeyboardMarkup):
+    def __init__(self, data: typing.Dict, per_page: int = 30, page: int = 0):
+        from datetime import datetime as dt
+        from aiogram.utils.markdown import text
+        
+        super().__init__(resize_keyboard=True, row_width=7)
+
+        if len(data) == 0:
+            return
+        
+        tasks = list(data.items())
+        num_pages = round((len(data)/per_page) + 0.5)
+        
+        for task in tasks[per_page*page : per_page*page + per_page]:
+            date_task = dt.strptime(task[1]['Дата'], '%Y%m%d%H%M%S').strftime('%d/%m/%Y')
+            button_label = text(str(date_task), task[1]['Наименование'], sep=' ')
+            
+            self.add(InlineKeyboardButton(button_label, 
+                     callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID=task[0], PAGE=page, ACTION='TASK')))
+
+        if num_pages > 1:
+            self.add(InlineKeyboardButton('Стр. 1', callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID="_", PAGE=0, ACTION='PAGE')))        
+            for page in range(1, num_pages):
+                self.insert(InlineKeyboardButton('Стр. %s' % str(page + 1), callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID="_", PAGE=page, ACTION='PAGE')))
+        
+        self.back = InlineKeyboardButton('◀️ Назад', callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID=task[0], PAGE='_', ACTION='BACK'))
+        self.add(self.back)
+        
+
+    class CallbackData:
+        TASKS_CB = CallbackData("TASK", "LEVEL", "TASK_ID", 'PAGE', 'ACTION')
+        # PAGES_CB = CallbackData("PAGES", "LEVEL", "PAGE")
+        # FILTER_CB = CallbackData("FILTER", "LEVEL", "ACTION")
 
 
 
-#### клавиатура авторизации
-# auth_kb_no = ReplyKeyboardMarkup(resize_keyboard=True)
-# auth_kb_yes = ReplyKeyboardMarkup(resize_keyboard=True)
-
-# login_button_no = KeyboardButton('Авторизация')
-# login_button_yes = KeyboardButton('YES_Авторизация')
-# task_button = KeyboardButton('Перейти к задачам')
-
-# auth_kb_no.row(login_button_no, task_button)
-# auth_kb_yes.row(login_button_yes, task_button)
-
-auth_kb_no  = InlineKeyboardMarkup()
-login_button_no = InlineKeyboardButton('🔑 Авторизация', callback_data='auth')
-task_button = InlineKeyboardButton('📓 Задачи', callback_data='go_to_tasks')
-auth_kb_no.row(login_button_no, task_button)
-
-
-### клавиатура списка задач и фильтра
-# task_list_kb = ReplyKeyboardMarkup(resize_keyboard=True)
-# full_button = KeyboardButton('Все задачи')
-# user_button = KeyboardButton('Мои задачи')
-# free_button = KeyboardButton('Свободные задачи')
-# past_button = KeyboardButton('Просроченные задачи')
-# # undate_button = KeyboardButton('Обновить список')
-# back_button = KeyboardButton('Назад')
+### Меню действия с задачей
+class TaskActionMenu(InlineKeyboardMarkup):
+    def __init__ (self, accepted : str = 'Нет'):
+        super().__init__(row_width=2)
+        self.but1  = InlineKeyboardButton('✅ Принять задачу', 
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="ACCEPT"))
+        self.but2  = InlineKeyboardButton('✏️ Комментарий', 
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="COMMENT"))
+        self.but3  = InlineKeyboardButton('❌ Отменить задачу', 
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="DECLINE"))
+        self.but4  = InlineKeyboardButton('▶️ Варианты', 
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="SHOWVAR"))
+        self.but5  = InlineKeyboardButton('▶️ Больше вариантов', 
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="SHOWMOREVAR"))
+        self.but6  = InlineKeyboardButton('◀️ Назад', 
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="BACK"))
+        if accepted == 'Нет':
+            self.row(self.but1, self.but2, self.but6)
+        else: 
+            self.row(self.but3, self.but2, self.but4, self.but5, self.but6)
 
 
-task_list_kb = InlineKeyboardMarkup()
-full_button = InlineKeyboardButton('📓 Все задачи', callback_data='all_tasks_page_1')
-user_button = InlineKeyboardButton('👤 Мои задачи', callback_data='user_tasks_page_1')
-free_button = InlineKeyboardButton('📗 Свободные', callback_data='free_tasks_page_1')
-past_button = InlineKeyboardButton('📕 Просроченные', callback_data='past_tasks_page_1')
-back_button = InlineKeyboardButton('◀️ Назад', callback_data='back_start')
-
-task_list_kb.row(full_button,user_button)
-task_list_kb.row(free_button, past_button)
-task_list_kb.add(back_button)
+    class CallbackData:
+        ACTION_CB = CallbackData("ACTION", "LEVEL", 'ACTION')
 
 
-### клавиатура действий с задачей - 1
-task_actions_kb = InlineKeyboardMarkup()
-task_actions_kb_accepted = InlineKeyboardMarkup()
-button_1 = InlineKeyboardButton('✅ Принять задачу', callback_data='accept_task')
-button_2 = InlineKeyboardButton('✏️ Комментарий', callback_data='comment')
-button_3 = InlineKeyboardButton('◀️ Назад',callback_data='back_tasks_page_1')
+### Меню действия с задачей (больше)
+class TaskActionMoreMenu(InlineKeyboardMarkup):
+    def __init__ (self):
+        super().__init__(row_width=2)
+        self.but1  = InlineKeyboardButton('👥 Пригласить пользователя', 
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="INVITE"))
+        self.but2  = InlineKeyboardButton('☑️ Выполненные работы', 
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="WORK"))
+        self.but3  = InlineKeyboardButton('🛅 Передать задачу', 
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="TRANSFER"))
+        self.but4  = InlineKeyboardButton('📷 Фото / видео', 
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="FILE"))
+        self.but5  = InlineKeyboardButton('◀️ Назад', 
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="BACK"))
 
-button_4 = InlineKeyboardButton('❌ Отменить задачу', callback_data='decline_task')
-button_5 = InlineKeyboardButton('▶️ Варианты', callback_data='show_vars')
-button_6 = InlineKeyboardButton('▶️ Больше вариантов',callback_data='show_morevars')
-
-task_actions_kb.row(button_1,button_2)
-task_actions_kb.add(button_3)
-
-task_actions_kb_accepted.row(button_4, button_2)
-task_actions_kb_accepted.row(button_5, button_6)
-task_actions_kb_accepted.add(button_3)
-
+        self.row(self.but1, self.but2, self.but3, self.but4, self.but5)
 
 
-### клавиатура вариантов
-more_options_kb = InlineKeyboardMarkup()
-task_users_button = InlineKeyboardButton('👥 Пригласить пользователя', callback_data='adduser_invite')
-todo_task_button = InlineKeyboardButton(' ☑️ Выполненные работы', callback_data='todowork')
-transfer_task_button = InlineKeyboardButton('🛅 Передать задачу', callback_data='adduser_shift' )
-upload_file_button = InlineKeyboardButton('📷 Фото / видео', callback_data='add_photo')
-back_var_button = InlineKeyboardButton('◀️ Назад', callback_data='backvar')
+    class CallbackData:
+        MOREVAR_CB = CallbackData("MOREVAR", "LEVEL", 'ACTION')
 
-more_options_kb.row(task_users_button,todo_task_button)
-more_options_kb.row(transfer_task_button, upload_file_button)
-more_options_kb.add(back_var_button)
+
 
 ### клавиатура отмены действия
 cancel_kb = InlineKeyboardMarkup()

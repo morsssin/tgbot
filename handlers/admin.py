@@ -1,36 +1,47 @@
-from  emoji import emojize
+import re
+import logging
 import asyncio
-from aiogram import types, Dispatcher
-from create_bot import dp, bot, URL, PASS, LOGIN
-import keyboards as kb
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.dispatcher.filters import Text
-from aiogram.utils.markdown import text, bold, italic, code, pre, escape_md
-from aiogram.utils.exceptions import (MessageToEditNotFound, MessageCantBeEdited, MessageCantBeDeleted,
-                                      MessageToDeleteNotFound)
-
-from urllib import request
-from requests.auth import HTTPBasicAuth
 import requests
-import pandas as pd
 import datetime as dt
+
+from aiogram import types, Dispatcher
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Text
+
+
+from aiogram.utils.markdown import text, hbold
+
+# from aiogram.utils.exceptions import (MessageToEditNotFound, MessageCantBeEdited, MessageCantBeDeleted,
+#                                       MessageToDeleteNotFound)
+import states as st
+import keyboards as kb
+
+from config import LEN_TASKS, URL, LOGIN, PASS, DEBUG_MODE
+from app import dp, bot
+
+
+### 
+from database.db_1c import db_1c
+from database.sqlite_db import database as db
+from test_db import test_DB, full_list
+
+
+
+
+logging.basicConfig(level=logging.INFO)
 
 users = ['admin', 'admin1', 'client']    
 users_pass = {'admin':'pass', 'admin1': 'password', 'client':'password'}
 users_chat_id = {'admin':'', 'admin1': '', 'client':''}
 
-class AuthStates(StatesGroup):
-    auth_login_st = State()
-    login_entered_st = State()
-    auth_pass_st = State()
+
 
 ###  ДЕРЕВО СОСТОЯНИЙ ###
 
 ### ввод логина
 async def auth_login(call: types.CallbackQuery,  state: FSMContext):
     msg = await call.message.answer('Для входа в систему введите логин')
-    await AuthStates.auth_login_st.set()    
+    await st.AuthStates.auth_login_st.set()    
     await state.update_data(auth_msgID = msg.message_id)
     
 ### проверка логина и ввод пароля
@@ -67,11 +78,11 @@ async def auth_pass(message: types.Message, state: FSMContext):
     
     
     
-def reg_handlers_client(dp : Dispatcher):
+def reg_handlers_admin(dp : Dispatcher):
 
 
     ### авторизация    
     dp.register_callback_query_handler(auth_login, Text(startswith="auth"), state="*")
     # dp.register_message_handler(auth_login, Text(equals="авторизация", ignore_case=True), state="*")
-    dp.register_message_handler(login_entered, state=AuthStates.auth_login_st)
+    # dp.register_message_handler(login_entered, state=AuthStates.auth_login_st)
     # dp.register_message_handler(auth_pass, state=AuthStates.login_entered_st)
