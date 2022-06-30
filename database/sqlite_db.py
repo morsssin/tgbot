@@ -24,19 +24,27 @@ class Database:
         logging.info("Database created")
         cursor = connection.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS auth_data
-                          (login TEXT PRIMARY KEY, password TEXT, chatID)''')
+                          (chatID TEXT PRIMARY KEY, 
+                           login TEXT,
+                           password TEXT,
+                           login_db TEXT
+                           )''')
+        
+                
         cursor.execute('''CREATE TABLE IF NOT EXISTS msgIDs 
                           (user, name, msgID)''')
         connection.commit()
         cursor.close()
+
 
     def connection(self):
         db_path = os.path.join(os.getcwd(), f"{self.name}.db")
         if not os.path.exists(db_path):
             self.create_db()
         return sqlite3.connect(f"{self.name}.db")
-        
-    async def _add_msgID(self, user, name, value):
+    
+            
+    async def add_msgID(self, user, name, value):
         cursor = self._conn.cursor()
         is_existed = cursor.execute('SELECT msgID FROM msgIDs WHERE user == ? AND name == ?', (user, name)).fetchone()
         if is_existed == None:
@@ -46,11 +54,32 @@ class Database:
         self._conn.commit()
         cursor.close()
     
-    async def _get_msgID(self, user, name):
+    async def get_msgID(self, user, name):
         cursor = self._conn.cursor()
         _id = cursor.execute('SELECT msgID FROM msgIDs WHERE user == ? AND name == ?', (user, name)).fetchone()
         cursor.close()
         return _id
+
+    async def add_user_data(self, data):
+        cursor = self._conn.cursor()
+        cursor.execute("""INSERT INTO auth_data VALUES (?, ?, ?, ?)""", 
+                       (data['chatID'], data['login'], data['password'], data['login_db']))                       
+        self._conn.commit()
+        cursor.close()        
+
+    async def get_user_data(self, chatID, data_name):
+        cursor = self._conn.cursor()
+        result = cursor.execute('SELECT ? FROM auth_data WHERE chatID == ?', (data_name, chatID)).fetchone()
+        cursor.close()
+        return result 
+
+    async def get_chatID(self, login):
+        cursor = self._conn.cursor()
+        chatID = cursor.execute('SELECT chatID FROM auth_data WHERE login == ?', (login, )).fetchone()
+        cursor.close()
+        return chatID 
+    
+    
 
 database = Database('bot_database')
 

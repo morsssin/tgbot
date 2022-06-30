@@ -36,3 +36,14 @@ async def mes_to_delete(message: types.Message, state: FSMContext):
         await bot.delete_message(chat_id=message.chat.id, message_id=mes_id)
     except:
         pass
+    
+    
+    
+    
+    
+    
+# class User():
+#     def __init__(self):
+#         self.login_1c
+#         self.nickname
+#         self.

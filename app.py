@@ -6,11 +6,15 @@ import logging
 from aiogram.utils import executor
 # from handlers import client, admin
 from database.sqlite_db import database as db
+from database.DB1C import test_connection
+
+
 
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils.executor import start_webhook
 from aiogram.contrib.fsm_storage.redis import RedisStorage2
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,6 +26,7 @@ dp = Dispatcher(bot, storage=storage)
 
 ### Функции
 async def on_startup(_):
+    test_connection.ping()
     logging.warning('Bot loaded')
 
 async def on_shutdown(dp):
@@ -37,7 +42,11 @@ async def on_shutdown(dp):
 ### Запуск бота
 if __name__ == "__main__":
     from handlers.client import reg_handlers_client as client_handlers
+    from handlers.auth import reg_handlers_auth as auth_handlers
+
     client_handlers(dp)
+    auth_handlers(dp)
+    
     # admin.reg_handlers_admin(dp)
     
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown(dp))

@@ -14,14 +14,9 @@ for i in range(1, 101):
                             'ДатаИсполнения':'20221231235959', 
                             'ПринятаКИсполнению':'Нет'}
 
-full_list = list(test_DB.keys())
-user_list = ['id03', 'id04', 'id05', 'id06', 'id07', 'id08', 'id09', 'id010']
-free_list = ['id09', 'id010', 'id011', 'id012', 'id013']
-past_list = ['id02', 'id014', 'id015']
-
-users = ['admin', 'admin1', 'client']    
+users = ['admin', 'admin1', 'user', 'user1']    
 users_pass = {'admin':'pass', 'admin1': 'password', 'client':'password'}
-users_chat_id = {'admin':'', 'admin1': '', 'client':''}
+users_chat_id = {'admin':'', 'admin1': '', 'user':'', 'user1':''}
 
 len_tasks = 30
 

@@ -34,154 +34,16 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-### принять задачу
-async def accept_task(call: types.CallbackQuery, state: FSMContext):
-    
-    ## to do: отправка принятия задачи в БД
-
-    await bot.answer_callback_query(call.id, text='Задача принята')
-    await bot.edit_message_reply_markup(chat_id = call.from_user.id,
-                                     message_id = call.message.message_id,
-                                     reply_markup=kb.task_actions_kb_accepted)
-
-async def decline_task(call: types.CallbackQuery, state: FSMContext):
-
-    ## to do: отправка ОТМЕНЫ задачи в БД
-    await bot.answer_callback_query(call.id, text='Задача отменена')
-    await bot.edit_message_reply_markup(chat_id = call.from_user.id,
-                                     message_id = call.message.message_id,
-                                     reply_markup=kb.task_actions_kb)
-    
-   
-### ввести комментарий и сохранить
-async def comment(call: types.CallbackQuery, state: FSMContext):
-    msg = await call.message.answer('Введите коментарий:', reply_markup=kb.cancel_kb)
-    await state.update_data(comment_id = msg.message_id)
-    await st.CommentStates.add_comment.set()
-
-async def save_comment(message: types.Message, state: FSMContext):
-    user_data = await state.get_data()  
-    
-    # len_comm = len(test_DB[user_data['taskID']]['COMMENTS'])
-    # test_DB[user_data['taskID']]['COMMENTS']['User {0}'.format(len_comm + 1)] = message.text
-    msg = await message.answer('Комментарий сохранен')
-       
-    await asyncio.sleep(1)
-    await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
-    await bot.delete_message(chat_id=message.from_user.id, message_id=user_data['comment_id'])
-    await message.delete()
-    
-    taskID = user_data['taskID']
-    
-    req = requests.get(URL + '/ERP/hs/tg_bot/tasks', auth=HTTPBasicAuth(LOGIN, PASS))
-    dataDB = req.json()
-    date_task = dt.datetime.strptime(dataDB[taskID]['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y')
-  
-    
-  
-    
-    # comments_txt = ''
-    # for idx, (key, val) in enumerate(test_DB[taskID]['COMMENTS'].items()):
-    #     txt = text(bold(key), ': ', escape_md(val), '\n', sep='')
-    #     comments_txt = text(comments_txt, txt, sep='')      
-
-    if dataDB[taskID]['Наименование'][:2]==' (':
-        task_descr = dataDB[taskID]['Наименование'][2:-1]
-    else:
-        task_descr = dataDB[taskID]['Наименование']
-    
-
-    task_message = text(bold(escape_md(dataDB[taskID]['Номер'])), ' от ', escape_md(date_task), '\n',
-                        escape_md(task_descr), '\n',
-                        '\n',
-                        bold('Клиент: '), escape_md(dataDB[taskID]['CRM_Партнер']), '\n',
-                        '\n',
-                        bold('Описание: '),'\n',
-                        escape_md(dataDB[taskID]['Описание']), '\n',
-                        '\n',
-                        bold('Исполнение: '), escape_md(dataDB[taskID]['Исполнитель']), '\n',
-                        escape_md(dataDB[taskID]['РезультатВыполнения']),
-                        sep='')
-            
-    
-    # task_message = text(task_message.replace('.', '\.'), '\n',
-    #                     '\n',
-    #                     bold('Комментарии:'),'\n',
-    #                     comments_txt, sep='')
-    # print(comments_txt)
-    # print(task_message)
-       
-    if dataDB[taskID]['ПринятаКИсполнению'] == 'Да':
-        keyboard = kb.task_actions_kb_accepted
-        
-    elif dataDB[taskID]['ПринятаКИсполнению'] == 'Нет':
-        keyboard = kb.task_actions_kb
-    
-    await bot.edit_message_text(text=task_message, 
-                        chat_id = message.from_user.id,
-                        message_id = user_data['start_msgID'],
-                        reply_markup=keyboard)    
-
-    await state.reset_state(with_data=False)
-
-
-### добавить фото/видео
 
 
 
-async def uploadPhoto(call: types.CallbackQuery, state: FSMContext):
-    msg = await call.message.answer('Добавьте фото или видео:', reply_markup=kb.cancel_kb)
-    await state.update_data(photo_msgID = msg.message_id)
-    await st.UploadPhotoState.add_photo.set()
 
 
 
-@dp.message_handler(content_types=["photo"], state=st.UploadPhotoState.add_photo)
-async def savePhoto(message: types.Message,  state: FSMContext):
-    file_id = message.photo[-1].file_id
-    user_data = await state.get_data()
-
-    await state.update_data(photoID = file_id)
-    msg = await bot.send_photo(message.chat.id, file_id,  caption='Фото загружено')
-    await state.reset_state(with_data=False)
-    
-    await asyncio.sleep(3)
-    await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
-    await bot.delete_message(chat_id=message.from_user.id, message_id=user_data['photo_msgID'])
-    await message.delete()
 
 
 
-@dp.message_handler(content_types=["video"], state=st.UploadPhotoState.add_photo)
-async def saveVideo(message: types.Message,  state: FSMContext):
-    print(message.video)
-    print(message.video.file_id)
-    user_data = await state.get_data()
-
-
-    file_id = message.video.file_id
-    
-    await state.update_data(videoID = file_id)
-    msg = await bot.send_video(message.chat.id, file_id, caption='Видео загружено')
-    await state.reset_state(with_data=False)
-    
-    await asyncio.sleep(3)
-    await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
-    await bot.delete_message(chat_id=message.from_user.id, message_id=user_data['photo_msgID'])
-    await message.delete()
-
-
-## пригласить пользователя
-async def add_user(call: types.CallbackQuery,  state: FSMContext):
-    
-    mode = call.data.split('_')[1]
-    keyboard = types.InlineKeyboardMarkup()    
-    for user in tdb.users:
-        keyboard.add(types.InlineKeyboardButton(user, callback_data='user_{0}_{1}'.format(tdb.users_chat_id[user], mode)))
-    
-    msg = await call.message.answer('Выберите пользователя:', reply_markup=keyboard)
-    await state.update_data(choose_user_msgID = msg.message_id)
-
+# TODO: добавить исключение для тех кого нет еще в боте и обновлять бд при каждом вызове переадресации
 
 async def choose_user(call: types.CallbackQuery,  state: FSMContext):
     
@@ -338,8 +200,6 @@ def reg_handlers_client(dp : Dispatcher):
 
 
     ### список задач
-    dp.register_callback_query_handler(accept_task, Text(startswith="accept_task"))
-    dp.register_callback_query_handler(decline_task, Text(startswith="decline_task"))
     
 
     # ### комментарий
@@ -356,7 +216,6 @@ def reg_handlers_client(dp : Dispatcher):
 
 
      ### добавить фото/видео
-    dp.register_callback_query_handler(uploadPhoto, Text(startswith="add_photo"), state="*")
     dp.register_callback_query_handler(del_comment,  Text(startswith="cancel_b"), state=st.CommentStates.add_comment)
 
 

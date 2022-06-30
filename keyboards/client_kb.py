@@ -35,7 +35,7 @@ class FiltersMenu(InlineKeyboardMarkup):
         self.back  = InlineKeyboardButton('◀️ Назад', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="BACK", PAGE=0))
         
-        self.add(self.full, self.user, self.free, self.past).add(self.back)
+        self.add(self.full, self.user, self.free, self.past, self.back)
 
     
     class CallbackData:
@@ -96,9 +96,9 @@ class TaskActionMenu(InlineKeyboardMarkup):
         self.but6  = InlineKeyboardButton('◀️ Назад', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="BACK"))
         if accepted == 'Нет':
-            self.row(self.but1, self.but2, self.but6)
+            self.add(self.but1, self.but2, self.but6)
         else: 
-            self.row(self.but3, self.but2, self.but4, self.but5, self.but6)
+            self.add(self.but3, self.but2, self.but4, self.but5, self.but6)
 
 
     class CallbackData:
@@ -120,13 +120,23 @@ class TaskActionMoreMenu(InlineKeyboardMarkup):
         self.but5  = InlineKeyboardButton('◀️ Назад', 
                      callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="BACK"))
 
-        self.row(self.but1, self.but2, self.but3, self.but4, self.but5)
+        self.add(self.but1, self.but2, self.but3, self.but4, self.but5)
 
 
     class CallbackData:
         MOREVAR_CB = CallbackData("MOREVAR", "LEVEL", 'ACTION')
 
-
+class UsersMenu(InlineKeyboardMarkup):
+    def __init__ (self, user_list: typing.List, action: str):
+        super().__init__(row_width=2)
+        for user in user_list:
+            self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(LOGIN=user, ACTION=action)))
+        
+        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(LOGIN=user, ACTION='CANCEL_B')))
+                               
+    class CallbackData:
+        USER_CB = CallbackData("USER", "LOGIN", 'ACTION')
+            
 
 ### клавиатура отмены действия
 cancel_kb = InlineKeyboardMarkup()
