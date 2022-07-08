@@ -25,57 +25,54 @@ class FiltersMenu(InlineKeyboardMarkup):
     def __init__(self):
         super().__init__(row_width=2)
         self.full  = InlineKeyboardButton('📓 Все задачи', 
-                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL", PAGE=0))
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL"))
         self.user  = InlineKeyboardButton('👤 Мои задачи', 
-                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="USER", PAGE=0))
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="USER"))
         self.free  = InlineKeyboardButton('📗 Свободные', 
-                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FREE", PAGE=0))
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FREE"))
         self.past  = InlineKeyboardButton('📕 Просроченные', 
-                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="PAST", PAGE=0))
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="PAST"))
         self.back  = InlineKeyboardButton('◀️ Назад', 
-                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="BACK", PAGE=0))
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="BACK"))
         
         self.add(self.full, self.user, self.free, self.past, self.back)
 
     
     class CallbackData:
-        FILTER_CB = CallbackData("FILTER", "LEVEL", "ACTION", 'PAGE')
+        FILTER_CB = CallbackData("FILTER", "LEVEL", "ACTION")
 
 
 ### Список задач
 class TasksMenu(InlineKeyboardMarkup):
-    def __init__(self, data: typing.Dict, per_page: int = 30, page: int = 0):
+    def __init__(self, data: typing.Dict, per_page: int = 40, page: int = 0):
         from datetime import datetime as dt
         from aiogram.utils.markdown import text
         
         super().__init__(resize_keyboard=True, row_width=7)
-
-        if len(data) == 0:
-            return
         
         tasks = list(data.items())
         num_pages = round((len(data)/per_page) + 0.5)
         
         for task in tasks[per_page*page : per_page*page + per_page]:
-            date_task = dt.strptime(task[1]['Дата'], '%Y%m%d%H%M%S').strftime('%d/%m/%Y')
+            date_task = dt.strptime(task[1]['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y')
             button_label = text(str(date_task), task[1]['Наименование'], sep=' ')
             
             self.add(InlineKeyboardButton(button_label, 
                      callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID=task[0], PAGE=page, ACTION='TASK')))
 
         if num_pages > 1:
-            self.add(InlineKeyboardButton('Стр. 1', callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID="_", PAGE=0, ACTION='PAGE')))        
+            self.add(InlineKeyboardButton('С.1', callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=0, ACTION='PAGE')))        
             for page in range(1, num_pages):
-                self.insert(InlineKeyboardButton('Стр. %s' % str(page + 1), callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID="_", PAGE=page, ACTION='PAGE')))
+                self.insert(InlineKeyboardButton('С.%s' % str(page + 1), callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=page, ACTION='PAGE')))
         
-        self.back = InlineKeyboardButton('◀️ Назад', callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID=task[0], PAGE='_', ACTION='BACK'))
+        self.back = InlineKeyboardButton('◀️ Назад', callback_data=self.CallbackData.BACK_CB.new(LEVEL=3, ACTION='BACK'))
         self.add(self.back)
         
 
     class CallbackData:
         TASKS_CB = CallbackData("TASK", "LEVEL", "TASK_ID", 'PAGE', 'ACTION')
-        # PAGES_CB = CallbackData("PAGES", "LEVEL", "PAGE")
-        # FILTER_CB = CallbackData("FILTER", "LEVEL", "ACTION")
+        PAGES_CB = CallbackData("PAGES", "LEVEL", "PAGE", "ACTION")
+        BACK_CB = CallbackData("BACK", "LEVEL", "ACTION")
 
 
 

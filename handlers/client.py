@@ -8,9 +8,9 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from datetime import datetime as dt
 from aiogram.utils.markdown import text, hbold
+from aiogram.utils.exceptions import MessageNotModified
+from contextlib import suppress
 
-# from aiogram.utils.exceptions import (MessageToEditNotFound, MessageCantBeEdited, MessageCantBeDeleted,
-#                                       MessageToDeleteNotFound)
 import states as st
 import keyboards as kb
 
@@ -19,7 +19,7 @@ from app import dp, bot
 
 ### 
 from database.DB1C import Database_1C
-from database.sqlite_db import database as db
+from database import sqlDB
 from test_db import test_DB, users, users_chat_id
 
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +33,7 @@ async def command_start(message : types.Message, state: FSMContext):
     msg_text = text(hbold('Добро пожаловать!'),'\n','Выберите действие:',sep='')
     msg = await message.answer (msg_text, reply_markup=kb.StartMenu())
     await state.update_data(start_msgID=msg.message_id)
+    await state.reset_state(with_data=False)
     
 
 ## выбор всех задач
@@ -58,40 +59,46 @@ async def back_to_filteres (call: types.CallbackQuery, state: FSMContext, callba
 
 
 async def full_list_taskd(call: types.CallbackQuery, state: FSMContext, callback_data: dict):
-
+    
+    user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
+    print(user.chat_id, user.login)
+    
     text_mode = {'FULL' : {'text' : text(hbold('Все задачи:')), 'params' : {}},
-                 'USER' : {'text' : text(hbold('Мои задачи:')), 'params' : {}},
+                 'USER' : {'text' : text(hbold('Мои задачи:')), 'params' : {'Executor': user.login}},
                  'FREE' : {'text' : text(hbold('Свободные задачи:')), 'params' : {'Accepted' : 'no'}},
                  'PAST' : {'text' : text(hbold('Просроченные задачи:')), 
-                           'params' : {'DateBegin': '00010000000000', 
+                           'params' : {'DateBegin': '20001231235959', 
                                        'DateEnd'  : dt.now().strftime('%Y%m%d%H%M%S'), 
                                        'Executed' : 'no'}}}
-   
+    
     user_data = await state.get_data()
-    
-    if (callback_data['ACTION'] == 'BACK')|(callback_data['ACTION'] == 'PAGE'):
-        mode = user_data['filter_mode']
-    
-    else:
-        mode = callback_data['ACTION'] 
+    if callback_data['ACTION'] in ['FULL','USER','FREE','PAST']:
+        page = 0
+        mode = callback_data['ACTION']
+        await state.update_data(pageID = page)
         await state.update_data(filter_mode=mode)
-    
-    page = int(callback_data['PAGE'])    
-    msg_text = text_mode[mode]['text']
-    
-    if DEBUG_MODE:
-        dataDB = test_DB      
+        
+    elif callback_data['ACTION'] == 'PAGE':
+        page = int(callback_data['PAGE'])  
+        mode = user_data['filter_mode']
+        await state.update_data(pageID = page)
     else:
-        global DB1C
-        login = await db.get_user_data(call.from_user.id, 'login_db')
-        password = await db.get_user_data(call.from_user.id, 'password')
-        DB1C = Database_1C(URL, login, password)
+        mode = user_data['filter_mode']
+        page = user_data['pageID']    
+     
+    if isinstance(user, sqlDB.User):
+        DB1C = Database_1C(URL, user.login_db, user.password)
         dataDB = DB1C.tasks(text_mode[mode]['params'])
-   
-    await bot.edit_message_text(text=msg_text, 
-                        chat_id = call.from_user.id,
-                        message_id = user_data['start_msgID'],
-                        reply_markup=kb.TasksMenu(data = dataDB, page=page))       
+    else:
+        return await bot.answer_callback_query(call.id, text = 'Пользователь не найден в базе данных. Пожалуйста, пройдите авторизацию.', show_alert=True)        
+    
+    if isinstance(dataDB, dict):
+        await bot.edit_message_text(text=text_mode[mode]['text'], 
+                            chat_id = call.from_user.id,
+                            message_id = user_data['start_msgID'],
+                            reply_markup=kb.TasksMenu(data = dataDB, page=page))
+    else: 
+        return await bot.answer_callback_query(call.id, text = 'По данному фильтру нет задач.', show_alert=True)
 
 
 
@@ -106,16 +113,19 @@ async def send_task_info(call: types.CallbackQuery, state: FSMContext, callback_
     if DEBUG_MODE:
         dataDB = test_DB[taskID]       
     else:
-        dataDB = DB1C.tasks(params={'id' : taskID})[taskID] 
+        user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
+        DB1C = Database_1C(URL, user.login_db, user.password)
+        dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
+        print(dataDB)
      
-    date_task = dt.strptime(dataDB['Дата'], '%Y%m%d%H%M%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
+    date_task = dt.strptime(dataDB['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
 
     taskNAME = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
-                        dataDB[taskID]['Наименование'], sep='')
+                        dataDB['Наименование'], sep='')
     await state.update_data(taskNAME=taskNAME)
     
     task_message = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
-                        dataDB[taskID]['Наименование'], '\n','\n',
+                        dataDB['Наименование'], '\n','\n',
                         hbold('Клиент: '), dataDB['CRM_Партнер'], '\n','\n',
                         hbold('Описание: '),'\n',
                         dataDB['Описание'], '\n','\n',
@@ -125,7 +135,7 @@ async def send_task_info(call: types.CallbackQuery, state: FSMContext, callback_
                         dataDB['Комментарий'],
                         sep='')
 
-    
+
     await bot.edit_message_text(text=task_message, 
                         chat_id = call.from_user.id,
                         message_id = user_data['start_msgID'],
@@ -141,14 +151,16 @@ async def accept_task(call: types.CallbackQuery, state: FSMContext, callback_dat
     if callback_data['ACTION'] == 'ACCEPT':
         msg_text = 'Задача принята'
         keyboard = kb.TaskActionMenu(accepted='Да')
-        if DEBUG_MODE != True:
-            DB1C.SetAccept(taskID=user_data['taskID'], accept='yes')
+        accept='yes'
              
     elif callback_data['ACTION'] == 'DECLINE':
         msg_text = 'Задача отменена'
         keyboard = kb.TaskActionMenu(accepted='Нет')
-        if DEBUG_MODE != True:
-            DB1C.SetAccept(taskID=user_data['taskID'], accept='no')
+        accept='no'
+        
+    user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
+    DB1C = Database_1C(URL, user.login_db, user.password)
+    DB1C.SetAccept(taskID=user_data['taskID'], accept=accept)
     
     await bot.answer_callback_query(call.id, text = msg_text)
     await bot.edit_message_reply_markup(chat_id = call.from_user.id,
@@ -164,10 +176,20 @@ async def comment(call: types.CallbackQuery, state: FSMContext):
 async def save_comment(message: types.Message, state: FSMContext): # нельзя оставить коммент выполненной задаче
     user_data = await state.get_data()  
     
-    if DEBUG_MODE != True:
-        DB1C.SetComment(user_data['taskID'], message.text, await db.get_user_data(message.from_user.id, 'login'))
+    user: sqlDB.User = sqlDB.User.basic_auth(message.from_user.id)
+    DB1C = Database_1C(URL, user.login_db, user.password)
+    req = DB1C.SetComment(user_data['taskID'], message.text, user.login)
     
-    msg = await message.answer('Комментарий сохранен')
+    if req != 200:
+        msg = await message.answer('Комментарий не может быть загружен. Ошибка {0}. Обратитесь к администратору.'.format(req))
+        await asyncio.sleep(1)
+        await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
+        await bot.delete_message(chat_id=message.from_user.id, message_id=user_data['comment_id'])
+        await message.delete()
+        await state.reset_state(with_data=False)
+        return
+    
+    msg = await message.answer('Комментарий сохранен.')
        
     await asyncio.sleep(1)
     await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
@@ -175,15 +197,12 @@ async def save_comment(message: types.Message, state: FSMContext): # нельз�
     await message.delete()
     
     taskID = user_data['taskID']
-    if DEBUG_MODE:
-        dataDB = test_DB[taskID]       
-    else:
-        dataDB = DB1C.tasks(params={'id' : taskID})[taskID]    
+    dataDB = DB1C.tasks(params={'id' : taskID})[taskID]    
         
-    date_task = dt.strptime(dataDB['Дата'], '%Y%m%d%H%M%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
+    date_task = dt.strptime(dataDB['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
 
     task_message = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
-                        dataDB[taskID]['Наименование'], '\n','\n',
+                        dataDB['Наименование'], '\n','\n',
                         hbold('Клиент: '), dataDB['CRM_Партнер'], '\n','\n',
                         hbold('Описание: '),'\n',
                         dataDB['Описание'], '\n','\n',
@@ -192,11 +211,11 @@ async def save_comment(message: types.Message, state: FSMContext): # нельз�
                         hbold('Комментарии: '),'\n',
                         dataDB['Комментарий'],
                         sep='')
-
-    await bot.edit_message_text(text=task_message, 
-                        chat_id = message.from_user.id,
-                        message_id = user_data['start_msgID'],
-                        reply_markup=kb.TaskActionMenu(accepted=dataDB['ПринятаКИсполнению']))   
+    with suppress(MessageNotModified):
+        await bot.edit_message_text(text=task_message, 
+                            chat_id = message.from_user.id,
+                            message_id = user_data['start_msgID'],
+                            reply_markup=kb.TaskActionMenu(accepted=dataDB['ПринятаКИсполнению']))   
     
     await state.reset_state(with_data=False)
 
@@ -242,10 +261,10 @@ async def saveFile(message: types.Message,  state: FSMContext):
 # async def add_user(call: types.CallbackQuery,  state: FSMContext, callback_data: dict):
     
 #     action = callback_data['ACTION']
-#     user_data = await state.update_data(user_action = action)
     
-#     if DEBUG_MODE:
-#         user_list = users
+#     # user_data = await state.update_data(user_action = action)
+    
+#     user_list = users
 #     else:
 #         None # TODO: добавить подгрузку списка из 1с
        
@@ -346,17 +365,17 @@ async def saveFile(message: types.Message,  state: FSMContext):
 
 
 
-async def back_vars(call: types.CallbackQuery, state: FSMContext):
-    user_data = await state.get_data()
-    taskID = user_data['taskID']
+# async def back_vars(call: types.CallbackQuery, state: FSMContext):
+#     user_data = await state.get_data()
+#     taskID = user_data['taskID']
     
-    if DEBUG_MODE:
-        dataDB = test_DB[taskID]       
-    else:
-        dataDB = DB1C.tasks(params={'id' : taskID})           
-    await bot.edit_message_reply_markup(chat_id = call.from_user.id,
-                                  message_id = call.message.message_id,
-                                  reply_markup=kb.TaskActionMenu(accepted=dataDB[taskID]['ПринятаКИсполнению']))
+#     if DEBUG_MODE:
+#         dataDB = test_DB[taskID]       
+#     else:
+#         dataDB = DB1C.tasks(params={'id' : taskID})           
+#     await bot.edit_message_reply_markup(chat_id = call.from_user.id,
+#                                   message_id = call.message.message_id,
+#                                   reply_markup=kb.TaskActionMenu(accepted=dataDB[taskID]['ПринятаКИсполнению']))
 
     
 
@@ -377,11 +396,12 @@ def reg_handlers_client(dp : Dispatcher):
     
     dp.register_callback_query_handler(back_start,        kb.FiltersMenu.CallbackData.FILTER_CB.filter(ACTION=["BACK"]))
     dp.register_callback_query_handler(full_list_move,    kb.StartMenu.CallbackData.START_CB.filter(ACTION=["SHOWTASKS"]))
-    dp.register_callback_query_handler(back_to_filteres,  kb.TasksMenu.CallbackData.TASKS_CB.filter(ACTION=["BACK"]))
+    dp.register_callback_query_handler(back_to_filteres,  kb.TasksMenu.CallbackData.BACK_CB.filter(ACTION=["BACK"]))
 
 
     dp.register_callback_query_handler(full_list_taskd, kb.FiltersMenu.CallbackData.FILTER_CB.filter(ACTION=['FULL','USER','FREE','PAST']))  
-    dp.register_callback_query_handler(full_list_taskd, kb.TasksMenu.CallbackData.TASKS_CB.filter(ACTION=["PAGE"]))  
+    dp.register_callback_query_handler(full_list_taskd, kb.TasksMenu.CallbackData.PAGES_CB.filter(ACTION=["PAGE"]))  
+    dp.register_callback_query_handler(full_list_taskd, kb.TaskActionMenu.CallbackData.ACTION_CB.filter(ACTION=["BACK"]))  
     dp.register_callback_query_handler(send_task_info, kb.TasksMenu.CallbackData.TASKS_CB.filter(ACTION=["TASK"]))
     
     dp.register_callback_query_handler(accept_task, kb.TaskActionMenu.CallbackData.ACTION_CB.filter(ACTION=["ACCEPT", "DECLINE"]))
@@ -405,7 +425,7 @@ def reg_handlers_client(dp : Dispatcher):
 
 
     # dp.register_callback_query_handler(show_options, Text(startswith="show_"))
-    dp.register_callback_query_handler(back_vars, Text(startswith="backvar"))
+    # dp.register_callback_query_handler(back_vars, Text(startswith="backvar"))
 
     
     dp.register_message_handler(echo_send)

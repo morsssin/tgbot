@@ -4,18 +4,18 @@ import json
 import logging
 import requests
 
-# from config import URL, LOGIN, PASS
+from config import URL, LOGIN, PASS
 from requests.auth import HTTPBasicAuth
 from urllib3.exceptions import NewConnectionError, MaxRetryError, ConnectTimeoutError
 from requests.exceptions import ConnectionError, ConnectTimeout
 
-URL = 'http://10.10.100.150:8079'
-PASS = 'tgbottestuser'
-LOGIN = 'tort101'
+# URL = 'http://10.10.100.150:8079'
+# PASS = 'tgbottestuser'
+# LOGIN = 'tort101'
 
 def check_connection(request):
-    if request:
-        logging.INFO('Соединение с 1С установлено')
+    if request.status_code == 200:
+        logging.warning('Соединение с 1С установлено')
         return True
     
     else:
@@ -43,10 +43,11 @@ class Database_1C:
 
     def ping (self):     
         try:
-            r = self.session.get(self.url + '/ERP/hs/tg_bot/ping', auth=HTTPBasicAuth(self.login, self.password), timeout=self.timeout)
-            return check_connection(r)
+            self.r = self.session.get(self.url + '/ERP/hs/tg_bot/ping', auth=HTTPBasicAuth(self.login, self.password), timeout=self.timeout)
+            return check_connection(self.r)
         
         except Exception as error:
+            print(error)
             # MaxRetryError, NewConnectionError, ConnectTimeoutError
             logging.error(error)
             return         
@@ -64,8 +65,10 @@ class Database_1C:
         Importance : str, значения “низкая”, “обычная”  или “высокая”  - важность.
         Accepted   : str, значения “yes” или “no” – принята (да или нет).
         Condition  : str, значения “активен” или “остановлен”  - состояние задачи
+        Executor   : str, имя пользователя (Исполнителя задачи).
 
         """ 
+        
         r = self.session.get(self.url + '/ERP/hs/tg_bot/tasks', auth=HTTPBasicAuth(self.login, self.password), params=params)
         
         if check_connection(r) != True:
@@ -74,9 +77,17 @@ class Database_1C:
         if r.json()['Errors'] != []:        
             logging.warning('Ошибки при загрузке БД: {0}'.format(r.json()['Errors'].join('/n')))        
             
-        dataDB = r.json()['Tasks']
-        dataDB = { dataDB[key]['id'] : value for key, value in dataDB.items() }
+        dataDB = r.json()['Tasks'][:400]       
+        dataDB = { dataDB[key]['id'] : value for key, value in enumerate(dataDB) }
         return dataDB
+
+    def users(self):
+        r = self.session.get(self.url + '/ERP/hs/tg_bot/users', auth=HTTPBasicAuth(self.login, self.password))
+        if check_connection(r) != True:
+            return
+        users = r.json()['Users']
+        return users
+        
             
     def SetAccept(self, taskID: str, accept: str):
         # TODO: добавить метод исполнителя
@@ -89,7 +100,7 @@ class Database_1C:
         data = json.dumps({"id": taskID, "Comment": comment, "user": user}, ensure_ascii=False)
         r = self.session.get(self.url + '/ERP/hs/tg_bot/SetComment', auth=HTTPBasicAuth(self.login, self.password), data=data)
         if check_connection(r) != True:
-            return
+            return r.status_code
 
     def SetRedirect(self, taskID: str, comment: str, user : str):
         # TODO: добавить метод исполнителя

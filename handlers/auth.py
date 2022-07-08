@@ -7,8 +7,8 @@ from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 
-# from aiogram.utils.exceptions import (MessageToEditNotFound, MessageCantBeEdited, MessageCantBeDeleted,
-#                                       MessageToDeleteNotFound)
+# from aiogram.utils.exceptions import (MessageToEditNotFound, MessageCantBeEdited, MessageCantBeDeleted,MessageToDeleteNotFound)
+
 import states as st
 import keyboards as kb
 
@@ -17,7 +17,7 @@ from app import dp, bot
 
 ### 
 from database.DB1C import Database_1C
-from database.sqlite_db import database as db
+from database import sqlDB
 from test_db import users
 
 logging.basicConfig(level=logging.INFO)
@@ -32,8 +32,10 @@ async def auth_login(call: types.CallbackQuery,  state: FSMContext):
 ### проверка логина и ввод пароля
 async def login_entered(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
+    user: sqlDB.User = sqlDB.User.basic_auth(chat_id = message.from_user.id)
+    print(user)
     
-    if await db.get_user_data(message.from_user.id, 'login') == message:
+    if isinstance(user, sqlDB.User):
         await bot.edit_message_text(text='Пользователь найден в базе данных.',  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
         await state.reset_state(with_data=False)
         await asyncio.sleep(1)
@@ -41,9 +43,8 @@ async def login_entered(message: types.Message, state: FSMContext):
         
     else:
         await state.update_data(login=message.text)  
-        await bot.edit_message_text(text='Введите пароль',  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
+        await bot.edit_message_text(text='Введите пароль',  chat_id = message.chat.id,message_id = user_data['auth_msgID'], reply_markup=kb.cancel_kb)
         await st.AuthStates.next()
-        await asyncio.sleep(1)
     
     await message.delete()
 
@@ -52,24 +53,27 @@ async def login_entered(message: types.Message, state: FSMContext):
 ### проверка пароля
 async def auth_pass(message: types.Message, state: FSMContext):
     user_data = await state.get_data()
+    
     login_db = user_data['login']
     password  = message.text
     
     await message.delete()
 
-    if login_db in users:
-        login_db = LOGIN
-        password = PASS
+    if login_db in users: #TODO удалить в продакшене
+        new_user = sqlDB.User(chat_id=message.from_user.id, login = user_data['login'])
+        new_user.save()
+        login_db = new_user.login_db
+        password = new_user.password
+
  
     if Database_1C(URL, login_db, password).ping():
-        
-        user_data = {'chatID'   : message.from_user.id,
-                     'login'    : user_data['login'],
-                     'password' : password,
-                     'login_db' : login_db}
-   
-        await db.add_user_data(data=user_data)
-        await bot.edit_message_text(text='Вход выполнен.',  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
+        new_user = sqlDB.User.create(chat_id=message.from_user.id, 
+                                    login = user_data['login'],
+                                    password = password,
+                                    login_db=login_db)
+        new_user.save()
+
+        await bot.edit_message_text(text='Вход выполнен.',  chat_id = message.chat.id, message_id = user_data['auth_msgID'])
         await asyncio.sleep(1)
         await bot.delete_message(chat_id = message.chat.id,message_id = user_data['auth_msgID'])
 
@@ -77,7 +81,8 @@ async def auth_pass(message: types.Message, state: FSMContext):
         txt = "Неверный логин или пароль. Повторите ввод или обратитесь к администратору."
         await bot.edit_message_text(text=txt,  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
         await asyncio.sleep(1)
-        return
+        await bot.delete_message(chat_id = message.chat.id,message_id = user_data['auth_msgID'])
+
     
     await state.reset_state(with_data=False)
         

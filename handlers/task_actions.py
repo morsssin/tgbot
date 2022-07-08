@@ -24,108 +24,13 @@ from app import dp, bot
 
 ### 
 from database.db_1c import db_1c
-from database.sqlite_db import database as db
+# from database.sqlite_db import database as db
 from test_db import test_DB, full_list
 
 
 
 
 logging.basicConfig(level=logging.INFO)
-
-
-
-
-
-
-
-
-
-
-
-
-# TODO: добавить исключение для тех кого нет еще в боте и обновлять бд при каждом вызове переадресации
-
-async def choose_user(call: types.CallbackQuery,  state: FSMContext):
-    
-    await state.update_data(from_chatID = call.from_user.id)
-    await state.update_data(to_chatID = call.data.split("_")[1])
-    await state.update_data(mode_chatID = call.data.split("_")[2])
-    
-    user_data = await state.get_data()
-    await bot.edit_message_text(text='Подтвердите выбор' ,
-                                chat_id = call.from_user.id, 
-                                message_id=user_data['choose_user_msgID'],
-                                reply_markup=kb.add_user_kb)
-    
-
-async def send_notification(call: types.CallbackQuery,  state: FSMContext):
-    user_data = await state.get_data()
-    taskID = user_data['taskID']
-    to_chatID = user_data['to_chatID']
-    from_chatID = user_data['from_chatID']
-    mode_chatID = user_data['mode_chatID']
-    
-    taskNAME = user_data['taskNAME']
-    
-    if mode_chatID == 'invite':
-        text_ = '{0} приглашает вас присоединиться к задаче "{1}"'.format(get_key(tdb.users_chat_id, user_data['from_chatID']),taskNAME)
-    elif mode_chatID == 'shift':
-        text_ = '{0} предлагает вам принять задачу "{1}"'.format(get_key(tdb.users_chat_id, user_data['from_chatID']),taskNAME)
-  
-    reply_kb = types.InlineKeyboardMarkup()
-    callback_data_accept = 'tasksend_accept_{0}_{1}_{2}_{3}'.format(taskID, from_chatID, to_chatID, mode_chatID)
-    callback_data_decline = 'tasksend_decline_{0}_{1}_{2}_{3}'.format(taskID, from_chatID, to_chatID, mode_chatID)
-    
-    accept_task_button = types.InlineKeyboardButton('✅ Принять', callback_data = callback_data_accept)
-    decline_task_button = types.InlineKeyboardButton('❌ Отклонить', callback_data = callback_data_decline)
-    reply_kb.row(accept_task_button, decline_task_button)
-    
-    msg = await bot.send_message(chat_id=user_data['to_chatID'], 
-                                     text=escape_md(text_),
-                                     reply_markup=reply_kb)
-    await state.update_data(ask_msgID = msg.message_id)
-    await bot.delete_message(chat_id=call.from_user.id, message_id = call.message.message_id)
-
-
-async def tasksend_reply(call: types.CallbackQuery,  state: FSMContext):
-    
-    await bot.delete_message(chat_id=call.from_user.id, message_id = call.message.message_id)
-    
-    mode = call.data.split('_')[1]
-    taskID = int(call.data.split('_')[2])
-    from_chatID = call.data.split('_')[3]
-    to_chatID = float(call.data.split('_')[4])
-    mode_chatID = call.data.split('_')[5]
-
-
-
-    req = requests.get(URL + '/ERP/hs/tg_bot/tasks', auth=HTTPBasicAuth(LOGIN, PASS))
-    dataDB = req.json()
-    date_task = dt.datetime.strptime(dataDB[taskID]['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y')
-    
-    if dataDB[taskID]['Наименование'][:2]==' (':
-        task_descr = dataDB[taskID]['Наименование'][2:-1]
-    else:
-        task_descr = dataDB[taskID]['Наименование']
-
-    taskNAME =  text(bold(escape_md(dataDB[taskID]['Номер'])), 'от', escape_md(date_task), ' ',
-                        escape_md(task_descr))
-
-    hide_button = types.InlineKeyboardButton('Cкрыть уведомление', callback_data='hide_message')
-    keyboard = types.InlineKeyboardMarkup().add(hide_button)
-
-    if (mode == 'accept')&(mode_chatID == 'invite'):
-        text_ = '{0} принял задачу "{1}". Выполняется добавление пользователя.'.format(get_key(tdb.users_chat_id, to_chatID),taskNAME) 
-        await bot.send_message(chat_id=from_chatID, text=escape_md(text_), reply_markup=keyboard)
- 
-    elif (mode == 'accept')&(mode_chatID == 'shift'):
-        text_ = '{0} принял задачу "{1}". Выполняется переадресация задачи.'.format(get_key(tdb.users_chat_id, to_chatID),taskNAME) 
-        await bot.send_message(chat_id=from_chatID, text=escape_md(text_), reply_markup=keyboard)
-                   
-    elif mode == 'decline':
-        text_ = '{0} отклонил задачу "{1}"'.format(get_key(tdb.users_chat_id, to_chatID),taskNAME) 
-        await bot.send_message(chat_id=from_chatID, text=escape_md(text_), reply_markup=keyboard)
-
 
 
 

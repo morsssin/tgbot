@@ -13,7 +13,7 @@ REDIS_PORT = os.getenv('REDIS_PORT')
 REDIS_PASS = os.getenv('REDIS_PASS')
 
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 LEN_TASKS = 30
 
