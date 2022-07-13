@@ -77,7 +77,7 @@ class Database_1C:
         if r.json()['Errors'] != []:        
             logging.warning('Ошибки при загрузке БД: {0}'.format(r.json()['Errors'].join('/n')))        
             
-        dataDB = r.json()['Tasks'][:400]       
+        dataDB = r.json()['Tasks']      
         dataDB = { dataDB[key]['id'] : value for key, value in enumerate(dataDB) }
         return dataDB
 
@@ -89,29 +89,29 @@ class Database_1C:
         return users
         
             
-    def SetAccept(self, taskID: str, accept: str):
+    def setaccept(self, taskID: str, accept: str):
         # TODO: добавить метод исполнителя
         data = json.dumps({"id" : taskID, 'Accept' : accept}, ensure_ascii=False)
-        r = self.session.get(self.url + '/ERP/hs/tg_bot/SetAccept', auth=HTTPBasicAuth(self.login, self.password), json=data)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setaccept', auth=HTTPBasicAuth(self.login, self.password), json=data)
         if check_connection(r) != True:
             return
         
-    def SetComment(self, taskID: str, comment: str, user : str):
+    def setcomment(self, taskID: str, comment: str, user : str):
         data = json.dumps({"id": taskID, "Comment": comment, "user": user}, ensure_ascii=False)
-        r = self.session.get(self.url + '/ERP/hs/tg_bot/SetComment', auth=HTTPBasicAuth(self.login, self.password), data=data)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setcomment', auth=HTTPBasicAuth(self.login, self.password), data=data)
         if check_connection(r) != True:
             return r.status_code
 
-    def SetRedirect(self, taskID: str, comment: str, user : str):
+    def setredirect(self, taskID: str, comment: str, user : str):
         # TODO: добавить метод исполнителя
         data = json.dumps({"id": taskID, "user": user}, ensure_ascii=False)
-        r = self.session.get(self.url + '/ERP/hs/tg_bot/SetRedirect', auth=HTTPBasicAuth(self.login, self.password), data=data)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setredirect', auth=HTTPBasicAuth(self.login, self.password), data=data)
         if check_connection(r) != True:
             return
 
-    def SetFile(self, taskID, file64, file_name, file_extension):
+    def setfile(self, taskID, file64, file_name, file_extension):
         data = json.dumps({"id": taskID, "file": file64, "name": file_name, 'extension': file_extension}, ensure_ascii=False)
-        r = self.session.get(self.url + '/ERP/hs/tg_bot/SetFile', auth=HTTPBasicAuth(self.login, self.password), data=data)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setfile', auth=HTTPBasicAuth(self.login, self.password), data=data)
         if check_connection(r) != True:
             return
 

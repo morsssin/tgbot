@@ -7,13 +7,13 @@ from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 
-# from aiogram.utils.exceptions import (MessageToEditNotFound, MessageCantBeEdited, MessageCantBeDeleted,MessageToDeleteNotFound)
 
 import states as st
 import keyboards as kb
 
 from config import URL, LOGIN, PASS
 from app import dp, bot
+from handlers import client
 
 ### 
 from database.DB1C import Database_1C
@@ -74,18 +74,33 @@ async def auth_pass(message: types.Message, state: FSMContext):
         new_user.save()
 
         await bot.edit_message_text(text='Вход выполнен.',  chat_id = message.chat.id, message_id = user_data['auth_msgID'])
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
         await bot.delete_message(chat_id = message.chat.id,message_id = user_data['auth_msgID'])
+        await bot.edit_message_reply_markup(chat_id = message.from_user.id,
+                                            message_id = user_data['start_msgID'],
+                                            reply_markup=kb.StartMenu(mode='change'))
+
 
     else:
         txt = "Неверный логин или пароль. Повторите ввод или обратитесь к администратору."
         await bot.edit_message_text(text=txt,  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
-        await asyncio.sleep(1)
+        await asyncio.sleep(3)
         await bot.delete_message(chat_id = message.chat.id,message_id = user_data['auth_msgID'])
 
     
     await state.reset_state(with_data=False)
-        
+ 
+
+async def user_change(call: types.CallbackQuery, state: FSMContext):   
+    
+    user: sqlDB.User = sqlDB.User.basic_auth(chat_id = call.from_user.id)
+    user.delete_instance()
+    
+    user_data = await state.get_data()
+    await bot.answer_callback_query(call.id, text='Выход выполнен', show_alert=True)
+    await bot.edit_message_reply_markup(chat_id = call.from_user.id,
+                                            message_id = user_data['start_msgID'],
+                                            reply_markup=kb.StartMenu())       
     
 def reg_handlers_auth(dp : Dispatcher):
 
@@ -93,4 +108,5 @@ def reg_handlers_auth(dp : Dispatcher):
     dp.register_callback_query_handler(auth_login,  Text(contains=('auth'), ignore_case=True), state="*")
     dp.register_message_handler(login_entered, state=st.AuthStates.auth_login_st)
     dp.register_message_handler(auth_pass, state=st.AuthStates.login_entered_st)
+    dp.register_callback_query_handler(user_change,  Text(contains=('uchange'), ignore_case=True), state="*")
     

@@ -15,7 +15,7 @@ class BaseModel(Model):
         
 
 class User(BaseModel):
-    chat_id = PrimaryKeyField()
+    chat_id = BigAutoField()
     login: str = CharField()
     password: str = CharField(default="tort101")
     login_db: str = CharField(default="tgbottestuser")

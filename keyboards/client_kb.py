@@ -7,14 +7,19 @@ from aiogram.utils.callback_data import CallbackData
 
 ### Стартовая клавиатура
 class StartMenu (InlineKeyboardMarkup):
-    def __init__(self):
+    def __init__(self, mode : str = 'auth'):
         super().__init__(row_width=2)
         self.auth  = InlineKeyboardButton('🔑 Авторизация', 
                      callback_data=self.CallbackData.START_CB.new(LEVEL=1, ACTION="AUTH"))
         self.tasks = InlineKeyboardButton('📓 Задачи', 
                      callback_data=self.CallbackData.START_CB.new(LEVEL=1, ACTION="SHOWTASKS"))
+        self.change = InlineKeyboardButton('🔑 Сменить пользователя', 
+                     callback_data=self.CallbackData.START_CB.new(LEVEL=1, ACTION="UCHANGE"))
         
-        self.add(self.auth, self.tasks)
+        if mode =='change':
+            self.add(self.change, self.tasks)
+        else:
+            self.add(self.auth, self.tasks)
         
     class CallbackData:
         START_CB = CallbackData("START", "LEVEL", "ACTION")
@@ -32,10 +37,15 @@ class FiltersMenu(InlineKeyboardMarkup):
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FREE"))
         self.past  = InlineKeyboardButton('📕 Просроченные', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="PAST"))
+        self.full1  = InlineKeyboardButton('📓 Выполненные', 
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL_ALL"))
+        self.user1  = InlineKeyboardButton('👤 Мои выполненные', 
+                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="USER_ALL"))        
+        
         self.back  = InlineKeyboardButton('◀️ Назад', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="BACK"))
         
-        self.add(self.full, self.user, self.free, self.past, self.back)
+        self.add(self.full, self.user, self.free, self.past, self.full1, self.user1, self.back)
 
     
     class CallbackData:
@@ -44,7 +54,7 @@ class FiltersMenu(InlineKeyboardMarkup):
 
 ### Список задач
 class TasksMenu(InlineKeyboardMarkup):
-    def __init__(self, data: typing.Dict, per_page: int = 40, page: int = 0):
+    def __init__(self, data: typing.Dict, per_page: int = 35, page: int = 0):
         from datetime import datetime as dt
         from aiogram.utils.markdown import text
         
@@ -52,6 +62,7 @@ class TasksMenu(InlineKeyboardMarkup):
         
         tasks = list(data.items())
         num_pages = round((len(data)/per_page) + 0.5)
+        print(per_page*page, per_page*page + per_page)
         
         for task in tasks[per_page*page : per_page*page + per_page]:
             date_task = dt.strptime(task[1]['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y')
@@ -59,12 +70,27 @@ class TasksMenu(InlineKeyboardMarkup):
             
             self.add(InlineKeyboardButton(button_label, 
                      callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID=task[0], PAGE=page, ACTION='TASK')))
-
-        if num_pages > 1:
+        
+        print(num_pages)
+        if (num_pages > 1)&(num_pages < 11):
             self.add(InlineKeyboardButton('С.1', callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=0, ACTION='PAGE')))        
             for page in range(1, num_pages):
                 self.insert(InlineKeyboardButton('С.%s' % str(page + 1), callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=page, ACTION='PAGE')))
-        
+ 
+        if num_pages > 10:
+            page_down10 = page - 9 if page > 8 else 0
+            page_up10 = page + 9 if page < num_pages-10 else num_pages-1
+            
+            page_down = page - 1 if page > 0 else 0
+            page_up = page + 1 if page < num_pages-1 else num_pages-1
+            
+            self.but1 = InlineKeyboardButton('с.{page}/{num_pages}'.format(page=page+1, num_pages=num_pages), callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=page, ACTION='PAGE'))
+            self.but2 = InlineKeyboardButton('⏪ 10', callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=page_down10, ACTION='PAGE'))
+            self.but3 = InlineKeyboardButton('◀️ 1', callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=page_down, ACTION='PAGE'))
+            self.but4 = InlineKeyboardButton('⏩ 10', callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=page_up10, ACTION='PAGE'))
+            self.but5 = InlineKeyboardButton('▶️️ 1', callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=page_up, ACTION='PAGE'))
+            self.add(self.but2, self.but3, self.but1, self.but5, self.but4) 
+           
         self.back = InlineKeyboardButton('◀️ Назад', callback_data=self.CallbackData.BACK_CB.new(LEVEL=3, ACTION='BACK'))
         self.add(self.back)
         
@@ -78,7 +104,7 @@ class TasksMenu(InlineKeyboardMarkup):
 
 ### Меню действия с задачей
 class TaskActionMenu(InlineKeyboardMarkup):
-    def __init__ (self, accepted : str = 'Нет'):
+    def __init__ (self, accepted : str = 'Нет', done : str = 'Нет'):
         super().__init__(row_width=2)
         self.but1  = InlineKeyboardButton('✅ Принять задачу', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="ACCEPT"))
@@ -87,13 +113,17 @@ class TaskActionMenu(InlineKeyboardMarkup):
         self.but3  = InlineKeyboardButton('❌ Отменить задачу', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="DECLINE"))
         self.but4  = InlineKeyboardButton('▶️ Варианты', 
-                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="SHOWVAR"))
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="vars"))
         self.but5  = InlineKeyboardButton('▶️ Больше вариантов', 
-                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="SHOWMOREVAR"))
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="morevars"))
         self.but6  = InlineKeyboardButton('◀️ Назад', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="BACK"))
         if accepted == 'Нет':
             self.add(self.but1, self.but2, self.but6)
+        
+        elif done == 'Да':
+            self.add(self.but2).add(self.but6)
+        
         else: 
             self.add(self.but3, self.but2, self.but4, self.but5, self.but6)
 
@@ -107,11 +137,11 @@ class TaskActionMoreMenu(InlineKeyboardMarkup):
     def __init__ (self):
         super().__init__(row_width=2)
         self.but1  = InlineKeyboardButton('👥 Пригласить пользователя', 
-                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="INVITE"))
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="invite"))
         self.but2  = InlineKeyboardButton('☑️ Выполненные работы', 
                      callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="WORK"))
         self.but3  = InlineKeyboardButton('🛅 Передать задачу', 
-                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="TRANSFER"))
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="shift"))
         self.but4  = InlineKeyboardButton('📷 Фото / видео', 
                      callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="FILE"))
         self.but5  = InlineKeyboardButton('◀️ Назад', 
