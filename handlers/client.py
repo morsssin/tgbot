@@ -20,7 +20,7 @@ from app import dp, bot
 ### 
 from database.DB1C import Database_1C
 from database import sqlDB
-from test_db import test_DB, users, users_chat_id, actions_var_list
+# from test_db import test_DB, users, users_chat_id, actions_var_list
 
 logging.basicConfig(level=logging.INFO)
 
@@ -132,13 +132,9 @@ async def send_task_info(call: types.CallbackQuery, state: FSMContext, callback_
     taskID = callback_data['TASK_ID']
     await state.update_data(taskID=taskID)
 
-    if DEBUG_MODE:
-        dataDB = test_DB[taskID]       
-    else:
-        user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
-        DB1C = Database_1C(URL, user.login_db, user.password)
-        dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
-        print(dataDB)
+    user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
+    DB1C = Database_1C(URL, user.login_db, user.password)
+    dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
      
     date_task = dt.strptime(dataDB['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
 
