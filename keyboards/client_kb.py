@@ -137,11 +137,11 @@ class TaskActionMoreMenu(InlineKeyboardMarkup):
     def __init__ (self):
         super().__init__(row_width=2)
         self.but1  = InlineKeyboardButton('👥 Пригласить пользователя', 
-                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="invite"))
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="INVITE"))
         self.but2  = InlineKeyboardButton('☑️ Выполненные работы', 
                      callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="WORK"))
         self.but3  = InlineKeyboardButton('🛅 Передать задачу', 
-                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="shift"))
+                     callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="TRANSFER"))
         self.but4  = InlineKeyboardButton('📷 Фото / видео', 
                      callback_data=self.CallbackData.MOREVAR_CB.new(LEVEL=5, ACTION="FILE"))
         self.but5  = InlineKeyboardButton('◀️ Назад', 
@@ -157,13 +157,27 @@ class UsersMenu(InlineKeyboardMarkup):
     def __init__ (self, user_list: typing.List, action: str):
         super().__init__(row_width=2)
         for user in user_list:
-            self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(LOGIN=user, ACTION=action)))
+            self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(LOGIN=user, ACTION='USERS')))
         
         self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(LOGIN=user, ACTION='CANCEL_B')))
                                
     class CallbackData:
-        USER_CB = CallbackData("USER", "LOGIN", 'ACTION')
-            
+        USER_CB = CallbackData("USERS", "LOGIN", 'ACTION')
+     
+        
+class UsersNotification(InlineKeyboardMarkup):
+    def __init__ (self, user_requestID: str):
+        super().__init__(row_width=2)
+        self.but1 = InlineKeyboardButton('✅ Принять', callback_data = self.CallbackData.USER_NOT.new(ACTION='ACCEPT', REPLY=user_requestID))
+        self.but2 = InlineKeyboardButton('❌ Отклонить', callback_data = self.CallbackData.USER_NOT.new(ACTION='CANCEL_B', REPLY="_"))
+        
+        self.add(self.but1, self.but2)
+        
+    class CallbackData:
+        USER_NOT = CallbackData("USERS_N", 'ACTION', 'REPLY')
+        
+    
+     
 
 ### клавиатура отмены действия
 cancel_kb = InlineKeyboardMarkup()

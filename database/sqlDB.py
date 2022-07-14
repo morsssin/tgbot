@@ -35,15 +35,42 @@ class User(BaseModel):
     def get_chat_id(login):
         return User.get_or_none(User.login == login).chat_id
     
-    
+    def login_auth(login):
+        return User.get_or_none(User.login == login)
+        
         
 class UserRequest(BaseModel):
-    requestID = AutoField()
-    from_user: User = ForeignKeyField(User)
-    to_user: User = ForeignKeyField(User)
+    id = CharField(primary_key=True)
+    taskID = TextField()
+    taskNAME = TextField()
+    
+    from_userID: User = ForeignKeyField(User)
+    to_userID: User = ForeignKeyField(User)
     action: str = TextField()
     decision: str = TextField()
-    text: str = TextField()
+    
+    @staticmethod
+    def basic_auth(id):
+        return UserRequest.get_or_none(id=id)
+    
+    def get_text(self):
+        if self.action == 'INVITE':
+            txt = f'{0} приглашает вас присоединиться к задаче "{1}"'.format(self.from_userID.login, self.taskNAME)
+            
+        elif self.action == 'TRANSFER':
+            txt = f'{0} предлагает вам принять задачу "{1}"'.format(self.from_userID.login, self.taskNAME)
+        return txt
+            
+    def det_text_reply(self):
+        if self.decision == 'ACCEPTED':
+            if self.action == 'INVITE':
+                txt = '<b>{0}</b> принял задачу "{1}". Выполняется добавление пользователя.'.format(self.to_userID.login,self.taskNAME)
+                
+            elif self.action == 'TRANSFER':
+                txt = '<b>{0}</b> принял задачу "{1}". Выполняется переадресация задачи.'.format(self.to_userID.login,self.taskNAME)
+        else:
+            txt = '{0} отклонил задачу "{1}"'.format(self.to_userID.login,self.taskNAME)
+        return txt
 
 
 def create_tables():
