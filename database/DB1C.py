@@ -6,22 +6,16 @@ import requests
 
 from config import URL, LOGIN, PASS
 from requests.auth import HTTPBasicAuth
-from urllib3.exceptions import NewConnectionError, MaxRetryError, ConnectTimeoutError
-from requests.exceptions import ConnectionError, ConnectTimeout
+# from urllib3.exceptions import NewConnectionError, MaxRetryError, ConnectTimeoutError
+# from requests.exceptions import ConnectionError, ConnectTimeout
 
-# URL = 'http://10.10.100.150:8079'
-# PASS = 'tgbottestuser'
-# LOGIN = 'tort101'
 
 def check_connection(request):
     if request.status_code == 200:
-        logging.warning('Соединение с 1С установлено')
-        return True
-    
+        logging.info('Соединение с 1С установлено')
     else:
         logging.error('Ошибка {0}. Текст: {1}'.format(request.status_code, request.text))
-        ### TODO отправить уведомление об ошибке в чат            
-        return False
+        return 'Ошибка {0}. Текст: {1}'.format(request.status_code, request.text)
 
 
 class Database_1C:
@@ -31,15 +25,6 @@ class Database_1C:
         self.password = PASS   
         self.session = requests.Session()        
         self.timeout = 2
-                
-        # try:
-        #     requests.get(self.url + '/ERP/hs/tg_bot/ping', auth=HTTPBasicAuth(self.login, self.password), timeout=self.timeout)
-        #     logging.info('Соединение с 1С установлено')
-        #     return True
-        
-        # except (requests.exceptions.ConnectionError, ConnectTimeout, MaxRetryError, NewConnectionError) as error:
-        #     logging.error(error)
-        #     return 
 
     def ping (self):     
         try:
@@ -47,13 +32,11 @@ class Database_1C:
             return check_connection(self.r)
         
         except Exception as error:
-            print(error)
-            # MaxRetryError, NewConnectionError, ConnectTimeoutError
             logging.error(error)
             return         
 
     
-    def tasks (self, params={}):
+    def tasks (self, params={}): # DONE 
         """
         Parameters
         ----------
@@ -71,7 +54,7 @@ class Database_1C:
         
         r = self.session.get(self.url + '/ERP/hs/tg_bot/tasks', auth=HTTPBasicAuth(self.login, self.password), params=params)
         
-        if check_connection(r) != True:
+        if check_connection(r) != None:
             return
         
         if r.json()['Errors'] != []:        
@@ -81,40 +64,57 @@ class Database_1C:
         dataDB = { dataDB[key]['id'] : value for key, value in enumerate(dataDB) }
         return dataDB
 
-    def users(self):
+    def users(self): # DONE 
         r = self.session.get(self.url + '/ERP/hs/tg_bot/users', auth=HTTPBasicAuth(self.login, self.password))
         if check_connection(r) != True:
             return
         users = r.json()['Users']
         return users
-        
-            
-    def setaccept(self, taskID: str, accept: str):
-        # TODO: добавить метод исполнителя
-        data = json.dumps({"id" : taskID, 'Accept' : accept}, ensure_ascii=False)
-        r = self.session.post(self.url + '/ERP/hs/tg_bot/setaccept', auth=HTTPBasicAuth(self.login, self.password), json=data)
-        if check_connection(r) != True:
-            return
-        
-    def setcomment(self, taskID: str, comment: str, user : str):
-        data = json.dumps({"id": taskID, "Comment": comment, "user": user}, ensure_ascii=False)
-        r = self.session.post(self.url + '/ERP/hs/tg_bot/setcomment', auth=HTTPBasicAuth(self.login, self.password), data=data)
+
+    def GetVariants(self, taskID: str): # DONE
+        r = self.session.get(self.url + '/ERP/hs/tg_bot/getvariants', auth=HTTPBasicAuth(self.login, self.password))
         if check_connection(r) != True:
             return r.status_code
+        if r.json()['Errors'] != []:        
+            logging.warning('Ошибки при загрузке БД: {0}'.format(r.json()['Errors'].join('/n')))                
+        variants = r.json()['Variants']
+        return variants
 
-    def setredirect(self, taskID: str, comment: str, user : str):
-        # TODO: добавить метод исполнителя
-        data = json.dumps({"id": taskID, "user": user}, ensure_ascii=False)
-        r = self.session.post(self.url + '/ERP/hs/tg_bot/setredirect', auth=HTTPBasicAuth(self.login, self.password), data=data)
-        if check_connection(r) != True:
-            return
+            
+    def SetAccept(self, taskID: str, accept: str): # DONE 
+        data = json.dumps({"id" : taskID, 'Accept' : accept}, ensure_ascii=False)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setaccept', auth=HTTPBasicAuth(self.login, self.password), json=data)
+        return check_connection(r)      
+
+        
+    def setcomment(self, taskID: str, comment: str, user : str): # DONE WORK
+        data = json.dumps({"id": taskID, "Comment": comment, "user": user}, ensure_ascii=False)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setcomment', auth=HTTPBasicAuth(self.login, self.password), data=data)
+        return check_connection(r)      
+
+
 
     def setfile(self, taskID, file64, file_name, file_extension):
         data = json.dumps({"id": taskID, "file": file64, "name": file_name, 'extension': file_extension}, ensure_ascii=False)
         r = self.session.post(self.url + '/ERP/hs/tg_bot/setfile', auth=HTTPBasicAuth(self.login, self.password), data=data)
-        if check_connection(r) != True:
-            return
+        return check_connection(r)      
 
+        
+    def SetRedirect(self, taskID: str, user : str): # DONE 
+        data = json.dumps({"id": taskID, "user": user}, ensure_ascii=False)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setredirect', auth=HTTPBasicAuth(self.login, self.password), data=data)
+        return check_connection(r)      
+
+        
+    def AddUsers(self, taskID: str,  users : list): # DONE 
+        data = json.dumps({"id": taskID, "users": users}, ensure_ascii=False)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/addusers', auth=HTTPBasicAuth(self.login, self.password), data=data)
+        return check_connection(r)      
+
+    def SetExecutor(self, taskID: str,  user : str): # DONE
+        data = json.dumps({"id": taskID, "executor": user}, ensure_ascii=False)
+        r = self.session.post(self.url + '/ERP/hs/tg_bot/setexecutor', auth=HTTPBasicAuth(self.login, self.password), data=data)
+        return check_connection(r)      
+
+        
 test_connection = Database_1C(URL, LOGIN, PASS)
-# test_connection.ping()
-

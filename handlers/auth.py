@@ -50,20 +50,13 @@ async def login_entered(message: types.Message, state: FSMContext):
 
 ### проверка пароля
 async def auth_pass(message: types.Message, state: FSMContext):
+    
     user_data = await state.get_data()
+    await message.delete()
     
     login_db = user_data['login']
     password  = message.text
     
-    await message.delete()
-
-    if login_db in ['admin', 'admin1', 'user', 'user1'] : #TODO удалить в продакшене
-        new_user = sqlDB.User(chat_id=message.from_user.id, login = user_data['login'])
-        new_user.save()
-        login_db = new_user.login_db
-        password = new_user.password
-
- 
     if Database_1C(URL, login_db, password).ping():
         new_user = sqlDB.User.create(chat_id=message.from_user.id, 
                                     login = user_data['login'],
@@ -77,15 +70,12 @@ async def auth_pass(message: types.Message, state: FSMContext):
         await bot.edit_message_reply_markup(chat_id = message.from_user.id,
                                             message_id = user_data['start_msgID'],
                                             reply_markup=kb.StartMenu(mode='change'))
-
-
     else:
         txt = "Неверный логин или пароль. Повторите ввод или обратитесь к администратору."
         await bot.edit_message_text(text=txt,  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
         await asyncio.sleep(3)
         await bot.delete_message(chat_id = message.chat.id,message_id = user_data['auth_msgID'])
-
-    
+ 
     await state.reset_state(with_data=False)
  
 
