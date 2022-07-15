@@ -5,6 +5,15 @@ import sqlite3 as sq
 
 from peewee import *
 
+def generate_uuid(length: int = 11) -> str:
+    import string
+    import random 
+    uuid = ""
+    template = list(string.digits + string.ascii_letters)
+    for x in range(1, length):
+        uuid = uuid + random.choice(template)
+    return uuid
+
 #  Создание базы данных
 db = SqliteDatabase('bot_database.db', pragmas={'journal_mode': 'wal', 'foreign_keys': "on"})
 
@@ -45,9 +54,27 @@ class UserRequest(BaseModel):
     taskNAME = TextField()
     
     from_userID: User = ForeignKeyField(User)
-    to_userID: User = ForeignKeyField(User)
+    to_userID: User = ForeignKeyField(User, null=True)
     action: str = TextField()
-    decision: str = TextField()
+    decision: str = TextField(default='DECLINED')
+
+    @staticmethod
+    def new_request(taskID: str, 
+                    taskNAME: str,
+                    from_userID: [str, int],
+                    action: str,
+                    ):
+        request_id = generate_uuid()
+        request = UserRequest.create(id=request_id, 
+                                     taskID=taskID, 
+                                     taskNAME=taskNAME,
+                                     from_userID=from_userID,
+                                     action=action,
+                                     )
+        return request
+
+
+
     
     @staticmethod
     def basic_auth(id):
@@ -55,21 +82,21 @@ class UserRequest(BaseModel):
     
     def get_text(self):
         if self.action == 'INVITE':
-            txt = f'{0} приглашает вас присоединиться к задаче "{1}"'.format(self.from_userID.login, self.taskNAME)
+            txt = '<b>{0}</b> приглашает вас присоединиться к задаче "{1}"'.format(self.from_userID.login, self.taskNAME)
             
         elif self.action == 'TRANSFER':
-            txt = f'{0} предлагает вам принять задачу "{1}"'.format(self.from_userID.login, self.taskNAME)
+            txt = '<b>{0}</b> предлагает вам принять задачу "{1}"'.format(self.from_userID.login, self.taskNAME)
         return txt
             
     def det_text_reply(self):
-        if self.decision == 'ACCEPTED':
+        if self.decision == 'ACCEPT':
             if self.action == 'INVITE':
                 txt = '<b>{0}</b> принял задачу "{1}". Выполняется добавление пользователя.'.format(self.to_userID.login,self.taskNAME)
                 
             elif self.action == 'TRANSFER':
                 txt = '<b>{0}</b> принял задачу "{1}". Выполняется переадресация задачи.'.format(self.to_userID.login,self.taskNAME)
         else:
-            txt = '{0} отклонил задачу "{1}"'.format(self.to_userID.login,self.taskNAME)
+            txt = '<b>{0}</b> отклонил задачу "{1}"'.format(self.to_userID.login,self.taskNAME)
         return txt
 
 

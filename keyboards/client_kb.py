@@ -4,6 +4,8 @@ import typing
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
 
+from database import sqlDB
+
 
 ### Стартовая клавиатура
 class StartMenu (InlineKeyboardMarkup):
@@ -113,9 +115,9 @@ class TaskActionMenu(InlineKeyboardMarkup):
         self.but3  = InlineKeyboardButton('❌ Отменить задачу', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="DECLINE"))
         self.but4  = InlineKeyboardButton('▶️ Варианты', 
-                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="vars"))
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="VARS"))
         self.but5  = InlineKeyboardButton('▶️ Больше вариантов', 
-                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="morevars"))
+                     callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="MOREVARS"))
         self.but6  = InlineKeyboardButton('◀️ Назад', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="BACK"))
         if accepted == 'Нет':
@@ -154,22 +156,27 @@ class TaskActionMoreMenu(InlineKeyboardMarkup):
         MOREVAR_CB = CallbackData("MOREVAR", "LEVEL", 'ACTION')
 
 class UsersMenu(InlineKeyboardMarkup):
-    def __init__ (self, user_list: typing.List, action: str):
+    def __init__ (self, user_list: typing.List):
         super().__init__(row_width=2)
         for user in user_list:
-            self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(LOGIN=user, ACTION='USERS')))
+            if sqlDB.User.get_or_none(login=user) != None:
+                user_ = sqlDB.User.login_auth(user)
+                chat_id = user_.chat_id
+            else:
+                chat_id = '_'
+            self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(CHAT_ID=chat_id, ACTION='USERS')))
         
-        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(LOGIN=user, ACTION='CANCEL_B')))
+        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(CHAT_ID='_', ACTION='CANCEL_B')))
                                
     class CallbackData:
-        USER_CB = CallbackData("USERS", "LOGIN", 'ACTION')
+        USER_CB = CallbackData("USERS", "CHAT_ID", 'ACTION')
      
         
 class UsersNotification(InlineKeyboardMarkup):
     def __init__ (self, user_requestID: str):
         super().__init__(row_width=2)
         self.but1 = InlineKeyboardButton('✅ Принять', callback_data = self.CallbackData.USER_NOT.new(ACTION='ACCEPT', REPLY=user_requestID))
-        self.but2 = InlineKeyboardButton('❌ Отклонить', callback_data = self.CallbackData.USER_NOT.new(ACTION='CANCEL_B', REPLY="_"))
+        self.but2 = InlineKeyboardButton('❌ Отклонить', callback_data = self.CallbackData.USER_NOT.new(ACTION='DECLINE', REPLY=user_requestID))
         
         self.add(self.but1, self.but2)
         

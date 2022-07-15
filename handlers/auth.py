@@ -11,14 +11,12 @@ from aiogram.dispatcher.filters import Text
 import states as st
 import keyboards as kb
 
-from config import URL, LOGIN, PASS
+from config import URL
 from app import dp, bot
-from handlers import client
 
 ### 
 from database.DB1C import Database_1C
 from database import sqlDB
-from test_db import users
 
 logging.basicConfig(level=logging.INFO)
 
@@ -59,7 +57,7 @@ async def auth_pass(message: types.Message, state: FSMContext):
     
     await message.delete()
 
-    if login_db in users: #TODO удалить в продакшене
+    if login_db in ['admin', 'admin1', 'user', 'user1'] : #TODO удалить в продакшене
         new_user = sqlDB.User(chat_id=message.from_user.id, login = user_data['login'])
         new_user.save()
         login_db = new_user.login_db
