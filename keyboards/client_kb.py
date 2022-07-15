@@ -184,7 +184,20 @@ class UsersNotification(InlineKeyboardMarkup):
         USER_NOT = CallbackData("USERS_N", 'ACTION', 'REPLY')
         
     
-     
+class VarsMenu(InlineKeyboardMarkup):
+    def __init__ (self, variants: list):
+        super().__init__(row_width=1)
+        
+        for var_dict in variants:
+            self.insert(InlineKeyboardButton(var_dict['ПредставлениеВарианта'], callback_data=self.CallbackData.VARS.new(VAR=var_dict['ЗначениеВарианта'])))
+        self.but = InlineKeyboardButton('◀️ Назад', callback_data = self.CallbackData.VARS.new(VAR='BACK'))
+        
+        self.add(self.but)
+        
+    class CallbackData:
+        VARS = CallbackData("VARS", 'VAR')
+        
+        
 
 ### клавиатура отмены действия
 cancel_kb = InlineKeyboardMarkup()

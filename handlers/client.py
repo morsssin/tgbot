@@ -77,9 +77,10 @@ async def full_list_taskd(call: types.CallbackQuery, state: FSMContext, callback
                  'USER_ALL' : {'text' : text(hbold('Мои задачи:')), 'params' : {'Executor': user.login, 'Executed':'yes'}},
                  'FREE' : {'text' : text(hbold('Свободные задачи:')), 'params' : {'Executed':'no', 'Accepted' : 'no'}},
                  'PAST' : {'text' : text(hbold('Просроченные задачи:')), 
-                           'params' : {'DateBegin': '20001231235959', 
+                           'params' : {'Executed' : 'no', 
+                                       'DateBegin': '20001231235959', 
                                        'DateExecuted'  : dt.now().strftime('%Y%m%d%H%M%S'), 
-                                       'Executed' : 'no'}}}
+                                       }}}
     
     user_data = await state.get_data()
     if callback_data['ACTION'] in ['FULL','USER','FREE','PAST', 'FULL_ALL', 'USER_ALL']:
@@ -98,12 +99,17 @@ async def full_list_taskd(call: types.CallbackQuery, state: FSMContext, callback
      
     DB1C = Database_1C(URL, user.login_db, user.password)
     dataDB = DB1C.tasks(text_mode[mode]['params'])
+    
+        
   
     if isinstance(dataDB, dict):
-        await bot.edit_message_text(text=text_mode[mode]['text'], 
+        # await bot.delete_message(chat_id=call.from_user.id, message_id=user_data['start_msgID'])
+
+        msg = await bot.edit_message_text(text=text_mode[mode]['text'], 
                             chat_id = call.from_user.id,
                             message_id = user_data['start_msgID'],
                             reply_markup=kb.TasksMenu(data = dataDB, page=page))
+        # await state.update_data(start_msgID=msg.message_id)
     else: 
         return await bot.answer_callback_query(call.id, text = 'По данному фильтру нет задач.', show_alert=True)
 
@@ -135,11 +141,15 @@ async def send_task_info(call: types.CallbackQuery, state: FSMContext, callback_
                         # dataDB['Комментарий'],
                         sep='')
 
+    await bot.delete_message(chat_id=call.from_user.id, message_id=user_data['start_msgID'])
 
-    await bot.edit_message_text(text=task_message, 
+    msg = await bot.send_message(text=task_message, 
                         chat_id = call.from_user.id,
-                        message_id = user_data['start_msgID'],
+                        # message_id = user_data['start_msgID'],
                         reply_markup=kb.TaskActionMenu(accepted=dataDB['ПринятаКИсполнению'], done=dataDB['Выполнена']))
+    await state.update_data(start_msgID=msg.message_id)
+
+    
 
 ## Принять задачу
 async def accept_task(call: types.CallbackQuery, state: FSMContext, callback_data: dict, ):
@@ -159,7 +169,7 @@ async def accept_task(call: types.CallbackQuery, state: FSMContext, callback_dat
     
     user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
     DB1C = Database_1C(URL, user.login_db, user.password)
-    DB1C.SetAccept(taskID=user_data['taskID'], accept=accept)
+    # DB1C.SetAccept(taskID=user_data['taskID'], accept=accept)
     DB1C.SetExecutor(taskID=user_data['taskID'], user=user.login)
     
     await bot.answer_callback_query(call.id, text = msg_text)
@@ -226,10 +236,13 @@ async def uploadFile(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(photo_msgID = msg.message_id)
     await st.UploadFileState.add_file.set()
 
-
+# @dp.message_handler(content_types=["photo"], state=st.UploadFileState.add_file)
+# @dp.message_handler(state=st.UploadFileState.add_file)
+@dp.message_handler(content_types=["text"], state=st.UploadFileState.add_file)
 async def saveFile(message: types.Message,  state: FSMContext):
     user_data = await state.get_data()
     print(message.content_type)
+    print(message)
     
     if message.content_type == 'photo':
         file_id = message.photo[-1].file_id
@@ -338,7 +351,14 @@ async def show_options(call: types.CallbackQuery, state: FSMContext, callback_da
         DB1C = Database_1C(URL, user.login_db, user.password)
         variants = DB1C.GetVariants(user_data['taskID'])
         print(variants)
-        # TODO: отправлять клавиатуру с вариантами
+        if isinstance(variants, list):
+            
+            keyboard = kb.VarsMenu(variants)
+            # TODO: отправлять клавиатуру с вариантами
+        else:
+            await bot.answer_callback_query(call.id, text=variants, show_alert=True)
+            return            
+
 
     elif mode == 'MOREVARS':
         keyboard = kb.TaskActionMoreMenu()
@@ -425,9 +445,10 @@ def reg_handlers_client(dp: Dispatcher):
 
     ### Добавить файл
     dp.register_callback_query_handler(uploadFile, kb.TaskActionMoreMenu.CallbackData.MOREVAR_CB.filter(ACTION=['FILE']), state="*")
-    dp.register_callback_query_handler(saveFile, content_types=["photo", "video"], state=st.UploadFileState.add_file)
+    # dp.register_callback_query_handler(saveFile, state=st.UploadFileState.add_file)
  
     dp.register_callback_query_handler(del_message,  Text(contains=('cancel_b'), ignore_case=True), state="*")
     dp.register_callback_query_handler(back_vars, kb.TaskActionMoreMenu.CallbackData.MOREVAR_CB.filter(ACTION=['BACK']))
+    dp.register_callback_query_handler(back_vars, kb.VarsMenu.CallbackData.VARS.filter(VAR=['BACK']))
     dp.register_message_handler(echo_send)
 
