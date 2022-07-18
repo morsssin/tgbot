@@ -1,23 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
 
-
-TOKEN = os.getenv('TOKEN')
-
-URL = os.getenv('URL')
-PASS = os.getenv('PASS')
-LOGIN = os.getenv('LOGIN')
-
-REDIS_HOST = os.getenv('REDIS_HOST')
-REDIS_PORT = os.getenv('REDIS_PORT')
-REDIS_PASS = os.getenv('REDIS_PASS')
-
-
-DEBUG_MODE = False
-
+## Bot settinngs
+TOKEN = '5321759824:AAEzZnvwVHx3U7unXviVvI0e9BD5i1npgi0'
 LEN_TASKS = 30
 
-# import configparser
-# config = configparser.ConfigParser().read('config.ini')
-# print(config.sections())
 
+## 1C data
+URL = 'http://10.10.100.150:8079'
+PASS = 'tgbottestuser'
+LOGIN = 'tort101'
+
+
+## Redis data
+REDIS_HOST = 'localhost'
+REDIS_PORT = '6379'
+REDIS_PASS = None

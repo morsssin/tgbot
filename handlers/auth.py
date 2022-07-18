@@ -12,7 +12,7 @@ import states as st
 import keyboards as kb
 
 from config import URL
-from app import dp, bot
+from load_bot import bot, dp
 
 ### 
 from database.DB1C import Database_1C
