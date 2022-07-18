@@ -15,15 +15,14 @@ import states as st
 import keyboards as kb
 
 from config import LEN_TASKS, URL
-from app import dp, bot
+from load_bot import bot, dp
 
 ### 
 from database.DB1C import Database_1C
 from database import sqlDB
-# from test_db import test_DB, users, users_chat_id, actions_var_list
+
 
 logging.basicConfig(level=logging.INFO)
-
 
     
 ## Старт
@@ -352,9 +351,7 @@ async def show_options(call: types.CallbackQuery, state: FSMContext, callback_da
         variants = DB1C.GetVariants(user_data['taskID'])
         print(variants)
         if isinstance(variants, list):
-            
             keyboard = kb.VarsMenu(variants)
-            # TODO: отправлять клавиатуру с вариантами
         else:
             await bot.answer_callback_query(call.id, text=variants, show_alert=True)
             return            

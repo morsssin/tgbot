@@ -1,21 +1,11 @@
 # -*- coding: utf-8 -*-
 
 
-from aiogram import types, Dispatcher
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Text
-
-
-from aiogram.utils.markdown import text, hbold
-
-import states as st
-import keyboards as kb
-
-from config import LEN_TASKS, URL, LOGIN, PASS, DEBUG_MODE
-from app import dp, bot
-
-from test_db import test_DB, full_list
-
+tools_list = []
+works_list = []
+for i in range(1, 100):
+    tools_list.append('Оборудование №%s' % i)
+    works_list.append('Работа №%s' % i)
 
 ### выполненные работы
 async def add_work_done (call: types.CallbackQuery(),  state: FSMContext):
