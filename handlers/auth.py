@@ -57,7 +57,7 @@ async def auth_pass(message: types.Message, state: FSMContext):
     login_db = user_data['login']
     password  = message.text
     
-    if Database_1C(URL, login_db, password).ping():
+    if Database_1C(URL, login_db, password).ping() == None:
         new_user = sqlDB.User.create(chat_id=message.from_user.id, 
                                     login = user_data['login'],
                                     password = password,

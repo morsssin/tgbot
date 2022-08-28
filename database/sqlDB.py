@@ -15,7 +15,9 @@ def generate_uuid(length: int = 11) -> str:
     return uuid
 
 #  Создание базы данных
-db = SqliteDatabase('bot_database.db', pragmas={'journal_mode': 'wal', 'foreign_keys': "on"})
+db = SqliteDatabase('bot_database.db', pragmas={'journal_mode': 'wal', 
+                                                'foreign_keys': "on",
+                                                'wal_autocheckpoint': 10})
 
 
 class BaseModel(Model):
@@ -99,11 +101,25 @@ class UserRequest(BaseModel):
             txt = '<b>{0}</b> отклонил задачу "{1}"'.format(self.to_userID.login,self.taskNAME)
         return txt
 
+class File(BaseModel):
+    tgID = TextField(primary_key=True)
+    taskID = TextField()
+    ftype = TextField()
+    name = TextField(null=True)
+    extension = TextField(null=True)
+    description = TextField(null=True)
+    size = BitField()
+    date = DateTimeField()
+    
+    @staticmethod
+    def basic_auth(tgID):
+        return File.get_or_none(tgID=tgID)
+
 
 def create_tables():
 
     db.connect()    
-    db.create_tables([User, UserRequest])
+    db.create_tables([User, UserRequest, File])
     
 def close_conn():
     db.close()

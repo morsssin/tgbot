@@ -26,7 +26,7 @@ class Database_1C:
         self.session = requests.Session()        
         self.timeout = 2
 
-    def ping (self):     
+    def ping (self):
         try:
             self.r = self.session.get(self.url + '/ERP/hs/tg_bot/ping', auth=HTTPBasicAuth(self.login, self.password), timeout=self.timeout)
             return check_connection(self.r)
@@ -89,15 +89,15 @@ class Database_1C:
         return check_connection(r)      
 
         
-    def setcomment(self, taskID: str, comment: str, user : str): # DONE WORK
+    def SetComment(self, taskID: str, comment: str, user : str): # DONE WORK
         data = {"id": taskID, "Comment": comment, "user": user}
         r = self.session.post(self.url + '/ERP/hs/tg_bot/setcomment', auth=HTTPBasicAuth(self.login, self.password), json=data)
         return check_connection(r)      
 
 
 
-    def setfile(self, taskID, file64, file_name, file_extension):
-        data = json.dumps({"id": taskID, "file": file64, "name": file_name, 'extension': file_extension}, ensure_ascii=False)
+    def SetFile(self, taskID, file64, file_name, file_extension):
+        data = {"id": taskID, "file": file64, "name": file_name, 'extension': file_extension}
         r = self.session.post(self.url + '/ERP/hs/tg_bot/setfile', auth=HTTPBasicAuth(self.login, self.password), json=data)
         return check_connection(r)      
 

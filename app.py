@@ -21,7 +21,7 @@ async def on_shutdown(dp):
     # await dp.storage.wait_closed()
     logging.warning("DB Connection closed")
     
-    await bot.close()
+    # await bot.close()
 
 
 ### Запуск бота

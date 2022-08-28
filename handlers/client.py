@@ -25,6 +25,32 @@ from database import sqlDB
 logging.basicConfig(level=logging.INFO)
 
     
+def getTaskDescription(dataDB: dict):
+        
+    date_task = dt.strptime(dataDB['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
+
+    taskNAME = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
+                        dataDB['Наименование'], sep='')
+    
+    task_message = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
+                        dataDB['Наименование'], '\n','\n',
+                        hbold('Клиент: '), dataDB['CRM_Партнер'], '\n','\n',
+                        hbold('Описание: '),'\n',
+                        dataDB['Описание'], '\n','\n',
+                        hbold('Исполнение: '), dataDB['Исполнитель'], '\n',
+                        dataDB['РезультатВыполнения'],
+                        # hbold('Комментарии: '),'\n',
+                        # dataDB['Комментарий'],
+                        sep='')
+    return task_message, taskNAME
+
+async def send_alert(message: types.Message, text: str, time: int):
+    msg = await bot.send_message(chat_id=message.from_user.id, text=text)
+    await asyncio.sleep(time)
+    await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
+
+    
+
 ## Старт
 async def command_start(message : types.Message, state: FSMContext):
     user: sqlDB.User = sqlDB.User.basic_auth(chat_id = message.from_user.id)
@@ -102,13 +128,11 @@ async def full_list_taskd(call: types.CallbackQuery, state: FSMContext, callback
         
   
     if isinstance(dataDB, dict):
-        # await bot.delete_message(chat_id=call.from_user.id, message_id=user_data['start_msgID'])
 
-        msg = await bot.edit_message_text(text=text_mode[mode]['text'], 
+        await bot.edit_message_text(text=text_mode[mode]['text'], 
                             chat_id = call.from_user.id,
                             message_id = user_data['start_msgID'],
-                            reply_markup=kb.TasksMenu(data = dataDB, page=page))
-        # await state.update_data(start_msgID=msg.message_id)
+                            reply_markup=kb.TasksMenu(data = dataDB, page=page, per_page = LEN_TASKS))
     else: 
         return await bot.answer_callback_query(call.id, text = 'По данному фильтру нет задач.', show_alert=True)
 
@@ -117,35 +141,22 @@ async def send_task_info(call: types.CallbackQuery, state: FSMContext, callback_
     
     user_data = await state.get_data()
     taskID = callback_data['TASK_ID']
-    await state.update_data(taskID=taskID)
 
     user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
     DB1C = Database_1C(URL, user.login_db, user.password)
     dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
-     
-    date_task = dt.strptime(dataDB['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
-
-    taskNAME = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
-                        dataDB['Наименование'], sep='')
-    await state.update_data(taskNAME=taskNAME)
     
-    task_message = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
-                        dataDB['Наименование'], '\n','\n',
-                        hbold('Клиент: '), dataDB['CRM_Партнер'], '\n','\n',
-                        hbold('Описание: '),'\n',
-                        dataDB['Описание'], '\n','\n',
-                        hbold('Исполнение: '), dataDB['Исполнитель'], '\n',
-                        dataDB['РезультатВыполнения'],
-                        # hbold('Комментарии: '),'\n',
-                        # dataDB['Комментарий'],
-                        sep='')
-
+    task_message, taskNAME = getTaskDescription(dataDB)
+    
     await bot.delete_message(chat_id=call.from_user.id, message_id=user_data['start_msgID'])
 
     msg = await bot.send_message(text=task_message, 
                         chat_id = call.from_user.id,
                         # message_id = user_data['start_msgID'],
                         reply_markup=kb.TaskActionMenu(accepted=dataDB['ПринятаКИсполнению'], done=dataDB['Выполнена']))
+    
+    await state.update_data(taskID=taskID)
+    await state.update_data(taskNAME=taskNAME)
     await state.update_data(start_msgID=msg.message_id)
 
     
@@ -168,13 +179,18 @@ async def accept_task(call: types.CallbackQuery, state: FSMContext, callback_dat
     
     user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
     DB1C = Database_1C(URL, user.login_db, user.password)
+    dataDB = DB1C.tasks(params={'id' : user_data['taskID']})[user_data['taskID']]
+    
     # DB1C.SetAccept(taskID=user_data['taskID'], accept=accept)
     DB1C.SetExecutor(taskID=user_data['taskID'], user=user.login)
     
+    task_message, _ = getTaskDescription(dataDB)
+    
     await bot.answer_callback_query(call.id, text = msg_text)
-    await bot.edit_message_reply_markup(chat_id = call.from_user.id,
-                                     message_id = call.message.message_id,
-                                     reply_markup=keyboard)
+    await bot.edit_message_text(text=task_message,
+                                chat_id = call.from_user.id,
+                                message_id = call.message.message_id,
+                                reply_markup=keyboard)
 
 ### ввести комментарий и сохранить
 async def comment(call: types.CallbackQuery, state: FSMContext):
@@ -187,39 +203,24 @@ async def save_comment(message: types.Message, state: FSMContext): # нельз�
     
     user: sqlDB.User = sqlDB.User.basic_auth(message.from_user.id)
     DB1C = Database_1C(URL, user.login_db, user.password)
-    req = DB1C.setcomment(user_data['taskID'], message.text, user.login)
+    req = DB1C.SetComment(user_data['taskID'], message.text, user.login)
     
+    await message.delete()
+   
     if req != None:
-        msg = await message.answer(req)
-        await asyncio.sleep(3)
-        await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
+        await send_alert(message, text=req, time=3)
         await bot.delete_message(chat_id=message.from_user.id, message_id=user_data['comment_id'])
-        await message.delete()
         await state.reset_state(with_data=False)
         return
     
-    msg = await message.answer('Комментарий сохранен.')
-       
-    await asyncio.sleep(1)
-    await bot.delete_message(chat_id=message.from_user.id, message_id=msg.message_id)
+    await send_alert(message, text='Комментарий сохранен.', time=2)
     await bot.delete_message(chat_id=message.from_user.id, message_id=user_data['comment_id'])
-    await message.delete()
     
     taskID = user_data['taskID']
     dataDB = DB1C.tasks(params={'id' : taskID})[taskID]    
         
-    date_task = dt.strptime(dataDB['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
+    task_message, _ = getTaskDescription(dataDB)
 
-    task_message = text(hbold(dataDB['Номер']), ' от ', date_task, '\n',
-                        dataDB['Наименование'], '\n','\n',
-                        hbold('Клиент: '), dataDB['CRM_Партнер'], '\n','\n',
-                        hbold('Описание: '),'\n',
-                        dataDB['Описание'], '\n','\n',
-                        hbold('Исполнение: '), dataDB['Исполнитель'], '\n',
-                        dataDB['РезультатВыполнения'],
-                        # hbold('Комментарии: '),'\n',
-                        # dataDB['Комментарий'],
-                        sep='')
     with suppress(MessageNotModified):
         await bot.edit_message_text(text=task_message, 
                             chat_id = message.from_user.id,
@@ -235,32 +236,58 @@ async def uploadFile(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(photo_msgID = msg.message_id)
     await st.UploadFileState.add_file.set()
 
-# @dp.message_handler(content_types=["photo"], state=st.UploadFileState.add_file)
-# @dp.message_handler(state=st.UploadFileState.add_file)
-@dp.message_handler(content_types=["text"], state=st.UploadFileState.add_file)
+@dp.message_handler(content_types=['photo', 'video', 'document'], state=st.UploadFileState.add_file)
 async def saveFile(message: types.Message,  state: FSMContext):
+    import base64
+    
+    user: sqlDB.User = sqlDB.User.basic_auth(message.from_user.id)
+    DB1C = Database_1C(URL, user.login_db, user.password)
     user_data = await state.get_data()
-    print(message.content_type)
-    print(message)
     
-    if message.content_type == 'photo':
-        file_id = message.photo[-1].file_id
-        file_name = message.photo[-1].values
-        print(file_name)
-        
-    elif message.content_type == 'video':
-        file_id = message.video.file_id
-        file_name = message.video.file_name
-        print(file_name)
-        print(message.video.values)
-    
-    # TODO: отправление файла и кодировка в байтах
-    # data = {"id": user_data['taskID'], "file": file_id, "name": file_name, 'extension': file_extension}
-         
     await message.delete() 
-    await bot.delete_message(chat_id=message.from_user.id, message_id=user_data['photo_msgID'])
-    await state.reset_state(with_data=False)
+  
+    ftype = message.content_type
+    taskID = user_data['taskID']
+    date = message.date  
+    description = message.caption
+        
+    if ftype == 'photo':
+        
+        tgID = message.photo[-1].file_id
+        size = message.photo[-1].file_size
+        name = 'photo_{0}.jpg'.format(tgID[16:26])
+                
+    elif ftype == 'video':
+        tgID = message.video.file_id
+        size = message.video.file_size
+        name = message.video.file_name        
+             
+    elif ftype == 'document':
+        tgID = message.document.file_id
+        size = message.document.file_size
+        name = message.document.file_name
+        
+    extension = name.split('.')[-1]
+    print(tgID, size, name, extension, date, description)
 
+    new_file = sqlDB.File.create(tgID = tgID, 
+                                 taskID = taskID,
+                                  ftype = ftype,
+                                  name = name,
+                                  extension = extension,
+                                  description = description, 
+                                  size = size, 
+                                  date = date)
+    new_file.save() 
+    
+    new_file = (await bot.download_file_by_id(tgID)).getvalue()
+    file64 = base64.b64encode(new_file).decode()
+    
+    DB1C.SetFile(taskID, file64, name, extension)
+    
+    await send_alert(message, text='Файл сохранен.', time=2)
+    await bot.delete_message(chat_id = message.from_user.id, message_id = user_data['photo_msgID'])    
+    await state.reset_state(with_data=False)
 
 
 ## пригласить пользователя
@@ -334,9 +361,10 @@ async def tasksend_reply(call: types.CallbackQuery,  state: FSMContext, callback
     if req != None:
         await bot.answer_callback_query(call.id, text=req, show_alert=True)
         return  
-        
+    
     keyboard = types.InlineKeyboardMarkup().add(types.InlineKeyboardButton('Cкрыть уведомление', callback_data='cancel_b')) 
     await bot.send_message(chat_id=user_request.from_userID, text=user_request.det_text_reply(), reply_markup=keyboard)
+    
 
 
 ###  вывести дополнительные варианты
@@ -388,8 +416,10 @@ async def back_vars(call: types.CallbackQuery, state: FSMContext):
     user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
     DB1C = Database_1C(URL, user.login_db, user.password)
     dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
-   
-    await bot.edit_message_reply_markup(
+    
+    task_message, _ = getTaskDescription(dataDB)
+
+    await bot.edit_message_text(text = task_message,
                         chat_id = call.from_user.id,
                         message_id = user_data['start_msgID'],
                         reply_markup=kb.TaskActionMenu(accepted=dataDB['ПринятаКИсполнению'], done=dataDB['Выполнена']))
@@ -442,7 +472,6 @@ def reg_handlers_client(dp: Dispatcher):
 
     ### Добавить файл
     dp.register_callback_query_handler(uploadFile, kb.TaskActionMoreMenu.CallbackData.MOREVAR_CB.filter(ACTION=['FILE']), state="*")
-    # dp.register_callback_query_handler(saveFile, state=st.UploadFileState.add_file)
  
     dp.register_callback_query_handler(del_message,  Text(contains=('cancel_b'), ignore_case=True), state="*")
     dp.register_callback_query_handler(back_vars, kb.TaskActionMoreMenu.CallbackData.MOREVAR_CB.filter(ACTION=['BACK']))
