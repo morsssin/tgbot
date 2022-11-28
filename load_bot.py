@@ -15,7 +15,7 @@ logging.basicConfig(format=u'%(filename)s [LINE:%(lineno)d] #%(levelname)-8s [%(
                     level=logging.INFO)
 
 
-storage = RedisStorage2(config.REDIS_HOST, config.REDIS_PORT)
-bot = Bot(config.TOKEN, parse_mode=types.ParseMode.HTML)
+storage = RedisStorage2(config.DATABASE_REDIS.REDIS_HOST, config.DATABASE_REDIS.REDIS_PORT)
+bot = Bot(config.BOT_SETTINGS.TOKEN, parse_mode=types.ParseMode.HTML)
 dp = Dispatcher(bot, storage=storage)
 

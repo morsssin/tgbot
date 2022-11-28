@@ -8,11 +8,13 @@ from keyboards.client_kb import (StartMenu,
                                  UsersMenu,
                                  UsersNotification,
                                  VarsMenu,
+                                 CompleteMenu,
                                  cancel_kb,
                                  option_kb,
                                  add_user_kb,
-                                 add_work_done_kb,
-                                 accept_work_done_kb)
+                                 # add_work_done_kb,
+                                 # accept_work_done_kb
+                                 )
 
 
 

@@ -15,7 +15,7 @@ def generate_uuid(length: int = 11) -> str:
     return uuid
 
 #  Создание базы данных
-db = SqliteDatabase('bot_database.db', pragmas={'journal_mode': 'wal', 
+db = SqliteDatabase(r'C:\Users\ПеньковДА\Desktop\tgbot\tgbot\bot_database.db', pragmas={'journal_mode': 'wal', 
                                                 'foreign_keys': "on",
                                                 'wal_autocheckpoint': 10})
 
@@ -44,10 +44,12 @@ class User(BaseModel):
         return User.get_or_none(chat_id=chat_id)
     
     def get_chat_id(login):
-        return User.get_or_none(User.login == login).chat_id
+        user = User.select().where(fn.Lower(User.login) == login.lower()).first()
+        return user.chat_id
     
     def login_auth(login):
-        return User.get_or_none(User.login == login)
+        user = User.select().where(fn.Lower(User.login) == login.lower()).first()
+        return user
         
         
 class UserRequest(BaseModel):
@@ -55,8 +57,10 @@ class UserRequest(BaseModel):
     taskID = TextField()
     taskNAME = TextField()
     
-    from_userID: User = ForeignKeyField(User)
-    to_userID: User = ForeignKeyField(User, null=True)
+    from_userID = CharField()
+    from_userName = CharField()
+    to_userID = CharField(null=True)
+    to_userName = CharField(null=True)
     action: str = TextField()
     decision: str = TextField(default='DECLINED')
 
@@ -64,6 +68,7 @@ class UserRequest(BaseModel):
     def new_request(taskID: str, 
                     taskNAME: str,
                     from_userID: [str, int],
+                    from_userName: [str],
                     action: str,
                     ):
         request_id = generate_uuid()
@@ -71,6 +76,7 @@ class UserRequest(BaseModel):
                                      taskID=taskID, 
                                      taskNAME=taskNAME,
                                      from_userID=from_userID,
+                                     from_userName=from_userName,
                                      action=action,
                                      )
         return request
@@ -84,21 +90,21 @@ class UserRequest(BaseModel):
     
     def get_text(self):
         if self.action == 'INVITE':
-            txt = '<b>{0}</b> приглашает вас присоединиться к задаче "{1}"'.format(self.from_userID.login, self.taskNAME)
+            txt = '<b>{0}</b> приглашает вас присоединиться к задаче \n\n{1}'.format(self.from_userName, self.taskNAME)
             
         elif self.action == 'TRANSFER':
-            txt = '<b>{0}</b> предлагает вам принять задачу "{1}"'.format(self.from_userID.login, self.taskNAME)
+            txt = '<b>{0}</b> предлагает вам принять задачу \n\n{1}'.format(self.from_userName, self.taskNAME)
         return txt
             
     def det_text_reply(self):
         if self.decision == 'ACCEPT':
             if self.action == 'INVITE':
-                txt = '<b>{0}</b> принял задачу "{1}". Выполняется добавление пользователя.'.format(self.to_userID.login,self.taskNAME)
+                txt = '<b>{0}</b> принял задачу "{1}". Выполняется добавление пользователя.'.format(self.to_userName,self.taskNAME)
                 
             elif self.action == 'TRANSFER':
-                txt = '<b>{0}</b> принял задачу "{1}". Выполняется переадресация задачи.'.format(self.to_userID.login,self.taskNAME)
+                txt = '<b>{0}</b> принял задачу "{1}". Выполняется переадресация задачи.'.format(self.to_userName,self.taskNAME)
         else:
-            txt = '<b>{0}</b> отклонил задачу "{1}"'.format(self.to_userID.login,self.taskNAME)
+            txt = '<b>{0}</b> отклонил задачу "{1}"'.format(self.to_userName,self.taskNAME)
         return txt
 
 class File(BaseModel):
@@ -115,11 +121,38 @@ class File(BaseModel):
     def basic_auth(tgID):
         return File.get_or_none(tgID=tgID)
 
+class Tasks(BaseModel):
+    id = AutoField(primary_key=True)
+    taskID = TextField()
+    task_name = TextField(null=True)
+    executor = TextField(null=True)
+    group_executors = TextField(null=True)
+    
+    
+    @staticmethod
+    def base_init():
+        from database.DB1C import Database_1C
+        from config import DATABASE_1C
+
+        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS)
+        dataDB = DB1C.tasks(params={'Executed':'no', 'Accepted': 'no'})  
+        
+        data = []
+        
+        for key, value in dataDB.items():
+            data.append({'taskID' : key,
+                         'task_name' : value['Наименование'],
+                         'executor' : value['Исполнитель'],
+                         'group_executors': value['РольИсполнителя']})
+            
+        for record in data:
+            Tasks.get_or_create(**record)
+    
 
 def create_tables():
-
-    db.connect()    
-    db.create_tables([User, UserRequest, File])
+    # db.connect()    
+    db.create_tables([User, UserRequest, File, Tasks])
+    Tasks.base_init()
     
 def close_conn():
     db.close()

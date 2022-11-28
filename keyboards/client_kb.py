@@ -5,6 +5,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.utils.callback_data import CallbackData
 
 from database import sqlDB
+from database.DB1C import Database_1C
 
 
 ### Стартовая клавиатура
@@ -31,23 +32,23 @@ class StartMenu (InlineKeyboardMarkup):
 class FiltersMenu(InlineKeyboardMarkup):
     def __init__(self):
         super().__init__(row_width=2)
-        self.full  = InlineKeyboardButton('📓 Все задачи', 
+        self.full  = InlineKeyboardButton('📓 Входящие', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL"))
-        self.user  = InlineKeyboardButton('👤 Мои задачи', 
+        self.user  = InlineKeyboardButton('👤 Текущие', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="USER"))
         self.free  = InlineKeyboardButton('📗 Свободные', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FREE"))
         self.past  = InlineKeyboardButton('📕 Просроченные', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="PAST"))
-        self.full1  = InlineKeyboardButton('📓 Выполненные', 
-                     callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL_ALL"))
-        self.user1  = InlineKeyboardButton('👤 Мои выполненные', 
+        # self.full1  = InlineKeyboardButton('📓 Выполненные', 
+        #              callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL_ALL"))
+        self.user1  = InlineKeyboardButton('✅ Выполненные', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="USER_ALL"))        
         
         self.back  = InlineKeyboardButton('◀️ Назад', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="BACK"))
         
-        self.add(self.full, self.user, self.free, self.past, self.full1, self.user1, self.back)
+        self.add(self.full, self.user, self.free, self.past, self.user1).add(self.back)
 
     
     class CallbackData:
@@ -56,7 +57,7 @@ class FiltersMenu(InlineKeyboardMarkup):
 
 ### Список задач
 class TasksMenu(InlineKeyboardMarkup):
-    def __init__(self, data: typing.Dict, per_page: int = 35, page: int = 0):
+    def __init__(self, data: typing.Dict, user: sqlDB.User, per_page: int = 35, page: int = 0):
         from datetime import datetime as dt
         from aiogram.utils.markdown import text
         
@@ -106,7 +107,7 @@ class TasksMenu(InlineKeyboardMarkup):
 
 ### Меню действия с задачей
 class TaskActionMenu(InlineKeyboardMarkup):
-    def __init__ (self, accepted : str = 'Нет', done : str = 'Нет'):
+    def __init__ (self, accepted : str = 'Нет', done : str = 'Нет', is_executor: bool = False):
         super().__init__(row_width=2)
         self.but1  = InlineKeyboardButton('✅ Принять задачу', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="ACCEPT"))
@@ -114,7 +115,7 @@ class TaskActionMenu(InlineKeyboardMarkup):
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="COMMENT"))
         self.but3  = InlineKeyboardButton('❌ Отменить задачу', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="DECLINE"))
-        self.but4  = InlineKeyboardButton('▶️ Варианты', 
+        self.but4  = InlineKeyboardButton('▶️ Выполнить', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="VARS"))
         self.but5  = InlineKeyboardButton('▶️ Больше вариантов', 
                      callback_data=self.CallbackData.ACTION_CB.new(LEVEL=4, ACTION="MOREVARS"))
@@ -123,9 +124,8 @@ class TaskActionMenu(InlineKeyboardMarkup):
         if accepted == 'Нет':
             self.add(self.but1, self.but2, self.but6)
         
-        elif done == 'Да':
-            self.add(self.but2).add(self.but6)
-        
+        elif (done == 'Да')|(is_executor == False):
+            self.add(self.but2).add(self.but6)       
         else: 
             self.add(self.but3, self.but2, self.but4, self.but5, self.but6)
 
@@ -159,14 +159,14 @@ class UsersMenu(InlineKeyboardMarkup):
     def __init__ (self, user_list: typing.List):
         super().__init__(row_width=2)
         for user in user_list:
-            if sqlDB.User.get_or_none(login=user) != None:
-                user_ = sqlDB.User.login_auth(user)
+            user_ = sqlDB.User.login_auth(user)
+            if user_ != None:
                 chat_id = user_.chat_id
             else:
                 chat_id = '_'
             self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(CHAT_ID=chat_id, ACTION='USERS')))
         
-        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(CHAT_ID='_', ACTION='CANCEL_B')))
+        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(CHAT_ID='_', ACTION='CANCEL_CALL_B'))) 
                                
     class CallbackData:
         USER_CB = CallbackData("USERS", "CHAT_ID", 'ACTION')
@@ -189,19 +189,37 @@ class VarsMenu(InlineKeyboardMarkup):
         super().__init__(row_width=1)
         
         for var_dict in variants:
-            self.insert(InlineKeyboardButton(var_dict['ПредставлениеВарианта'], callback_data=self.CallbackData.VARS.new(VAR=var_dict['ЗначениеВарианта'])))
-        self.but = InlineKeyboardButton('◀️ Назад', callback_data = self.CallbackData.VARS.new(VAR='BACK'))
+            self.insert(InlineKeyboardButton(var_dict['ПредставлениеВарианта'], callback_data=self.CallbackData.VARS.new(ACTION = 'CHOOSE', VAR=var_dict['ЗначениеВарианта'])))
+        self.but = InlineKeyboardButton('◀️ Назад', callback_data = self.CallbackData.VARS.new(ACTION = 'BACK', VAR='BACK'))
         
         self.add(self.but)
         
     class CallbackData:
-        VARS = CallbackData("VARS", 'VAR')
+        VARS = CallbackData("VARS", 'ACTION', 'VAR')
+        
+        
+class CompleteMenu(InlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__(row_width=2)
+        self.done  = InlineKeyboardButton('✅ Выполнить', 
+                     callback_data=self.CallbackData.COMPLETE_CB.new(ACTION="DONE"))
+        self.more  = InlineKeyboardButton('▶️ Больше вариантов', 
+                     callback_data=self.CallbackData.COMPLETE_CB.new(ACTION="MORE"))
+
+        self.back  = InlineKeyboardButton('◀️ Назад', 
+                     callback_data=self.CallbackData.COMPLETE_CB.new(ACTION="BACK"))
+        
+        self.add(self.done, self.more, self.back)
+
+    
+    class CallbackData:
+        COMPLETE_CB = CallbackData("FILTER", "ACTION")
         
         
 
 ### клавиатура отмены действия
 cancel_kb = InlineKeyboardMarkup()
-cancel_button = InlineKeyboardButton('❌ Отмена', callback_data='cancel_b')
+cancel_button = InlineKeyboardButton('❌ Отмена', callback_data='cancel_call_b')
 cancel_kb.add(cancel_button)
 
 ### клафиатура принятия варианта
@@ -209,19 +227,21 @@ option_kb = InlineKeyboardMarkup()
 accept_button = InlineKeyboardButton('✅ Принять', callback_data='accept_b')
 option_kb.row(accept_button, cancel_button)
 
+
+
 ### клавиатура - пользователь для приглашения
 add_user_kb = InlineKeyboardMarkup()
 add_user_b = InlineKeyboardButton('✅ Принять', callback_data='users_invite')
 add_user_kb.row(add_user_b, cancel_button)
 
-### клавиатура для выполненных работ
-add_work_done_kb = InlineKeyboardMarkup()
-works_button = InlineKeyboardButton('Работы', switch_inline_query_current_chat ='tasks:')
-tools_button = InlineKeyboardButton('Оборудование', switch_inline_query_current_chat ='tools:')
-# cancel_button2 = InlineKeyboardButton('❌ Отмена', callback_data='hide_message')
-add_work_done_kb.row(works_button, tools_button).add(cancel_button)
+# ### клавиатура для выполненных работ
+# add_work_done_kb = InlineKeyboardMarkup()
+# works_button = InlineKeyboardButton('Работы', switch_inline_query_current_chat ='tasks:')
+# tools_button = InlineKeyboardButton('Оборудование', switch_inline_query_current_chat ='tools:')
+# # cancel_button2 = InlineKeyboardButton('❌ Отмена', callback_data='hide_message')
+# add_work_done_kb.row(works_button, tools_button).add(cancel_button)
 
-accept_work_done_kb = InlineKeyboardMarkup()
-acccept_work_button = InlineKeyboardButton('✅ Принять', callback_data='work_accepted')
-decline_work_button = InlineKeyboardButton('❌ Отмена', callback_data='work_declined')
-accept_work_done_kb.row(acccept_work_button, decline_work_button)
+# accept_work_done_kb = InlineKeyboardMarkup()
+# acccept_work_button = InlineKeyboardButton('✅ Принять', callback_data='work_accepted')
+# decline_work_button = InlineKeyboardButton('❌ Отмена', callback_data='work_declined')
+# accept_work_done_kb.row(acccept_work_button, decline_work_button)

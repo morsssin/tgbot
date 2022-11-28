@@ -6,12 +6,12 @@ import asyncio
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
+from cryptography.fernet import Fernet
 
 
 import states as st
 import keyboards as kb
 
-from config import URL
 from load_bot import bot, dp
 
 ### 
@@ -56,8 +56,14 @@ async def auth_pass(message: types.Message, state: FSMContext):
     
     login_db = user_data['login']
     password  = message.text
-    
-    if Database_1C(URL, login_db, password).ping() == None:
+        
+    if Database_1C(login_db, password, auth=True).ping() == None:
+        from config import DATABASE_SQL
+        
+        cipher = Fernet(DATABASE_SQL.key) 
+        password = cipher.encrypt(password.encode('utf-8')).decode('utf-8')
+         
+        
         new_user = sqlDB.User.create(chat_id=message.from_user.id, 
                                     login = user_data['login'],
                                     password = password,
@@ -85,7 +91,7 @@ async def user_change(call: types.CallbackQuery, state: FSMContext):
     user.delete_instance()
     
     user_data = await state.get_data()
-    await bot.answer_callback_query(call.id, text='Выход выполнен', show_alert=True)
+    await bot.answer_callback_query(call.id, text='Выход выполнен', show_alert=True, cache_time=10000)
     await bot.edit_message_reply_markup(chat_id = call.from_user.id,
                                             message_id = user_data['start_msgID'],
                                             reply_markup=kb.StartMenu())       
