@@ -50,7 +50,31 @@ class User(BaseModel):
     def login_auth(login):
         user = User.select().where(fn.Lower(User.login) == login.lower()).first()
         return user
+ 
+class Users1C(BaseModel):
+    id = AutoField(primary_key=True)
+    login = CharField()
+
+    @staticmethod
+    def base_init():
+        from database.DB1C import Database_1C
+        from config import DATABASE_1C
+
+        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS)
+        users = DB1C.users()  
         
+        data = []
+        
+        for user in users:
+            data.append({'login' : user})
+            
+        for record in data:
+            Users1C.get_or_create(**record)
+            
+    def login_auth(login):
+        user = Users1C.select().where(Users1C.login == login).first()
+        return user
+       
         
 class UserRequest(BaseModel):
     id = CharField(primary_key=True)
@@ -59,10 +83,10 @@ class UserRequest(BaseModel):
     
     from_userID = CharField()
     from_userName = CharField()
-    to_userID = CharField(null=True)
+    # to_userID = CharField(null=True)
     to_userName = CharField(null=True)
     action: str = TextField()
-    decision: str = TextField(default='DECLINED')
+    # decision: str = TextField(null=True)
 
     @staticmethod
     def new_request(taskID: str, 
@@ -88,24 +112,24 @@ class UserRequest(BaseModel):
     def basic_auth(id):
         return UserRequest.get_or_none(id=id)
     
-    def get_text(self):
-        if self.action == 'INVITE':
-            txt = '<b>{0}</b> приглашает вас присоединиться к задаче \n\n{1}'.format(self.from_userName, self.taskNAME)
+    # def get_text(self):
+    #     if self.action == 'INVITE':
+    #         txt = '<b>{0}</b> приглашает вас присоединиться к задаче \n\n{1}'.format(self.from_userName, self.taskNAME)
             
-        elif self.action == 'TRANSFER':
-            txt = '<b>{0}</b> предлагает вам принять задачу \n\n{1}'.format(self.from_userName, self.taskNAME)
-        return txt
+    #     elif self.action == 'TRANSFER':
+    #         txt = '<b>{0}</b> предлагает вам принять задачу \n\n{1}'.format(self.from_userName, self.taskNAME)
+    #     return txt
             
-    def det_text_reply(self):
-        if self.decision == 'ACCEPT':
-            if self.action == 'INVITE':
-                txt = '<b>{0}</b> принял задачу "{1}". Выполняется добавление пользователя.'.format(self.to_userName,self.taskNAME)
+    # def det_text_reply(self):
+    #     if self.decision == 'ACCEPT':
+    #         if self.action == 'INVITE':
+    #             txt = '<b>{0}</b> принял задачу "{1}". Выполняется добавление пользователя.'.format(self.to_userName,self.taskNAME)
                 
-            elif self.action == 'TRANSFER':
-                txt = '<b>{0}</b> принял задачу "{1}". Выполняется переадресация задачи.'.format(self.to_userName,self.taskNAME)
-        else:
-            txt = '<b>{0}</b> отклонил задачу "{1}"'.format(self.to_userName,self.taskNAME)
-        return txt
+    #         elif self.action == 'TRANSFER':
+    #             txt = '<b>{0}</b> принял задачу "{1}". Выполняется переадресация задачи.'.format(self.to_userName,self.taskNAME)
+    #     else:
+    #         txt = '<b>{0}</b> отклонил задачу "{1}"'.format(self.to_userName,self.taskNAME)
+    #     return txt
 
 class File(BaseModel):
     tgID = TextField(primary_key=True)
@@ -151,8 +175,9 @@ class Tasks(BaseModel):
 
 def create_tables():
     # db.connect()    
-    db.create_tables([User, UserRequest, File, Tasks])
+    db.create_tables([User, UserRequest, File, Tasks, Users1C])
     Tasks.base_init()
+    Users1C.base_init()
     
 def close_conn():
     db.close()

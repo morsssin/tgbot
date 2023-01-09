@@ -70,21 +70,21 @@ async def run_service():
                 if value['Исполнитель'] != '':
                     user = sqlDB.User.login_auth(value['Исполнитель'])
                     if isinstance(user, sqlDB.User):
-                        notify_user(user, msg_type='user', data=value)
+                        await notify_user(user, msg_type='user', data=value)
                     else:
-                        print('### user not found in tg_bot')
+                        logging.info("User not found in tg_bot")
                     
                 if value['РольИсполнителя'] != '':                    
                     users = roles[value['РольИсполнителя']]
                     for user_ in users:
                         user = sqlDB.User.login_auth(user_)
                         if isinstance(user, sqlDB.User):
-                            notify_user(user, msg_type='group', data=value)
+                            await notify_user(user, msg_type='group', data=value)
                         else:
                             logging.info("User not found in tg_bot")
 
         else:
-            logging.info("No new task")
+            logging.info("No new tasks")
             
 
         sqlDB.Tasks.base_init()

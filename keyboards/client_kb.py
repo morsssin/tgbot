@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import typing
+import logging
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
@@ -40,8 +41,6 @@ class FiltersMenu(InlineKeyboardMarkup):
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FREE"))
         self.past  = InlineKeyboardButton('📕 Просроченные', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="PAST"))
-        # self.full1  = InlineKeyboardButton('📓 Выполненные', 
-        #              callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="FULL_ALL"))
         self.user1  = InlineKeyboardButton('✅ Выполненные', 
                      callback_data=self.CallbackData.FILTER_CB.new(LEVEL=2, ACTION="USER_ALL"))        
         
@@ -65,16 +64,16 @@ class TasksMenu(InlineKeyboardMarkup):
         
         tasks = list(data.items())
         num_pages = round((len(data)/per_page) + 0.5)
-        print(per_page*page, per_page*page + per_page)
+
         
         for task in tasks[per_page*page : per_page*page + per_page]:
-            date_task = dt.strptime(task[1]['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y')
-            button_label = text(str(date_task), task[1]['Наименование'], sep=' ')
+            # date_task = dt.strptime(task[1]['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y')
+            button_label = text(task[1]['Наименование'], sep=' ')
             
             self.add(InlineKeyboardButton(button_label, 
                      callback_data=self.CallbackData.TASKS_CB.new(LEVEL=3, TASK_ID=task[0], PAGE=page, ACTION='TASK')))
+        # logging.info(f"num_pages:{num_pages}, slice: [{per_page*page}, {per_page*page + per_page}]")
         
-        print(num_pages)
         if (num_pages > 1)&(num_pages < 11):
             self.add(InlineKeyboardButton('С.1', callback_data=self.CallbackData.PAGES_CB.new(LEVEL=3, PAGE=0, ACTION='PAGE')))        
             for page in range(1, num_pages):
@@ -159,17 +158,19 @@ class UsersMenu(InlineKeyboardMarkup):
     def __init__ (self, user_list: typing.List):
         super().__init__(row_width=2)
         for user in user_list:
-            user_ = sqlDB.User.login_auth(user)
-            if user_ != None:
-                chat_id = user_.chat_id
-            else:
-                chat_id = '_'
-            self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(CHAT_ID=chat_id, ACTION='USERS')))
+            user_ = sqlDB.Users1C.login_auth(user)
+            
+            # user_ = sqlDB.User.login_auth(user)
+            # if user_ != None:
+            #     chat_id = user_.chat_id
+            # else:
+            #     chat_id = '_'
+            self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(USER=user_.id, ACTION='USERS')))
         
-        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(CHAT_ID='_', ACTION='CANCEL_CALL_B'))) 
+        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(USER='_', ACTION='CANCEL_CALL_B'))) 
                                
     class CallbackData:
-        USER_CB = CallbackData("USERS", "CHAT_ID", 'ACTION')
+        USER_CB = CallbackData("USERS", "USER", 'ACTION')
      
         
 class UsersNotification(InlineKeyboardMarkup):

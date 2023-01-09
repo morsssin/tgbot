@@ -82,7 +82,8 @@ class BasicAuth(AuthBase):
 
 def check_connection(request):
     if request.status_code == 200:
-        logging.info('Соединение с 1С установлено')
+        pass
+        # logging.info('Соединение с 1С установлено')
     else:
         try:
             logging.warning('Ошибки при загрузке БД: {0}'.format('/n'.join(request.json()['Errors'])))

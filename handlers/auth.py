@@ -18,22 +18,26 @@ from load_bot import bot, dp
 from database.DB1C import Database_1C
 from database import sqlDB
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 
 
 ### ввод логина
 async def auth_login(call: types.CallbackQuery,  state: FSMContext):
+    logging.info(f"{call.from_user.id} - auth login")
     msg = await call.message.answer('Для входа в систему введите логин', reply_markup=kb.cancel_kb)
     await st.AuthStates.auth_login_st.set()    
     await state.update_data(auth_msgID = msg.message_id)
     
 ### проверка логина и ввод пароля
 async def login_entered(message: types.Message, state: FSMContext):
+    logging.info(f"{message.from_user.id} -login entered - {message.text}")
+
     user_data = await state.get_data()
     user: sqlDB.User = sqlDB.User.basic_auth(chat_id = message.from_user.id)
-    print(user)
     
     if isinstance(user, sqlDB.User):
+        logging.info(f"{message.from_user.id} - auth successful - {user}")
+        
         await bot.edit_message_text(text='Пользователь найден в базе данных.',  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
         await state.reset_state(with_data=False)
         await asyncio.sleep(1)
@@ -50,6 +54,8 @@ async def login_entered(message: types.Message, state: FSMContext):
 
 ### проверка пароля
 async def auth_pass(message: types.Message, state: FSMContext):
+    logging.info(f"{message.from_user.id} - auth password")
+
     
     user_data = await state.get_data()
     await message.delete()
@@ -69,6 +75,7 @@ async def auth_pass(message: types.Message, state: FSMContext):
                                     password = password,
                                     login_db=login_db)
         new_user.save()
+        logging.info(f"{message.from_user.id} - auth successful")
 
         await bot.edit_message_text(text='Вход выполнен.',  chat_id = message.chat.id, message_id = user_data['auth_msgID'])
         await asyncio.sleep(2)
@@ -77,6 +84,7 @@ async def auth_pass(message: types.Message, state: FSMContext):
                                             message_id = user_data['start_msgID'],
                                             reply_markup=kb.StartMenu(mode='change'))
     else:
+        logging.warning(f"{message.from_user.id} - auth invalid data")
         txt = "Неверный логин или пароль. Повторите ввод или обратитесь к администратору."
         await bot.edit_message_text(text=txt,  chat_id = message.chat.id,message_id = user_data['auth_msgID'])
         await asyncio.sleep(3)
@@ -86,6 +94,7 @@ async def auth_pass(message: types.Message, state: FSMContext):
  
 
 async def user_change(call: types.CallbackQuery, state: FSMContext):   
+    logging.info(f"{call.from_user.id} - user change")
     
     user: sqlDB.User = sqlDB.User.basic_auth(chat_id = call.from_user.id)
     user.delete_instance()

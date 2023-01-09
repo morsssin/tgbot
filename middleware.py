@@ -3,7 +3,7 @@ from aiogram.dispatcher.handler import SkipHandler, CancelHandler, current_handl
 from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.dispatcher import DEFAULT_RATE_LIMIT, FSMContext, Dispatcher
 from aiogram import types
-
+from database import sqlDB
 
 
 
@@ -13,10 +13,13 @@ class Middleware(BaseMiddleware):
 
     @staticmethod
     async def on_process_message(message: types.Message, data: dict):
-        chat_id = message.chat.id
-
-        # state: FSMContext = data["state"]
-        print(f"[MESSAGE] {message.chat.full_name} {message.from_user.mention} - {message.text}")
+        user = sqlDB.User.basic_auth(message.from_user.id)
+        print(f"[MESSAGE] {user} {user.login} - {message.text}")
+        
+    async def on_process_callback(call: types.CallbackQuery, data: dict):
+        user = sqlDB.User.basic_auth(call.from_user.id)
+        print(call)
+        # print(f"[MESSAGE] {user} {user.login} - {message.text}")
         
     # async def __call__(self, 
     #                    handler: types.Callable[[types.Message, types.Dict[str, types.Any]], types.Awaitable[types.Any]],
