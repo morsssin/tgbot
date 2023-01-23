@@ -39,7 +39,7 @@ if __name__ == "__main__":
         os.makedirs(logs_dir)
         
     filename = os.path.join(logs_dir, datetime.date.today().strftime("%d_%m_%Y") + "_log.log")
-    logging.basicConfig(level=logging.INFO, filename=filename, filemode="w", 
+    logging.basicConfig(level=logging.INFO, filename=filename, filemode="a", 
                         format='[%(asctime)s] %(filename)s [LINE:%(lineno)d] #%(levelname)-8s %(message)s')
      
     client.reg_handlers_client(dp)

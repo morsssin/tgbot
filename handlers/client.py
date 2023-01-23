@@ -4,7 +4,7 @@ import logging
 import asyncio
 import base64
 import datetime
-
+from peewee import *
 
 from aiogram import types, Dispatcher
 from aiogram.dispatcher import FSMContext
@@ -124,6 +124,7 @@ async def command_start(message : types.Message, state: FSMContext):
     msg_text = text(hbold('Добро пожаловать!'),'\n','Выберите действие:',sep='')
     msg = await message.answer (msg_text, reply_markup=keyboard)
     await state.update_data(start_msgID=msg.message_id)
+    
 
     
 ## Назад к старту

@@ -71,9 +71,9 @@ async def auth_pass(message: types.Message, state: FSMContext):
          
         
         new_user = sqlDB.User.create(chat_id=message.from_user.id, 
-                                    login = user_data['login'],
+                                    login = login_db,
                                     password = password,
-                                    login_db=login_db)
+                                    login_db=login_db.lower())
         new_user.save()
         logging.info(f"{message.from_user.id} - auth successful")
 

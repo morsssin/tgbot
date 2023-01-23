@@ -44,11 +44,11 @@ class User(BaseModel):
         return User.get_or_none(chat_id=chat_id)
     
     def get_chat_id(login):
-        user = User.select().where(fn.Lower(User.login) == login.lower()).first()
+        user = User.select().where(User.login_db == login.lower()).first()
         return user.chat_id
     
     def login_auth(login):
-        user = User.select().where(fn.Lower(User.login) == login.lower()).first()
+        user = User.select().where(User.login_db == login.lower()).first()
         return user
  
 class Users1C(BaseModel):
@@ -147,6 +147,7 @@ class File(BaseModel):
 
 class Tasks(BaseModel):
     id = AutoField(primary_key=True)
+    date = DateTimeField()
     taskID = TextField()
     task_name = TextField(null=True)
     executor = TextField(null=True)
@@ -164,7 +165,8 @@ class Tasks(BaseModel):
         data = []
         
         for key, value in dataDB.items():
-            data.append({'taskID' : key,
+            data.append({'date' : value['Дата'],
+                         'taskID' : key,
                          'task_name' : value['Наименование'],
                          'executor' : value['Исполнитель'],
                          'group_executors': value['РольИсполнителя']})

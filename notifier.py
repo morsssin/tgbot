@@ -69,10 +69,12 @@ async def run_service():
             for key, value in new_tasks.items():
                 if value['Исполнитель'] != '':
                     user = sqlDB.User.login_auth(value['Исполнитель'])
+                    
+                    
                     if isinstance(user, sqlDB.User):
                         await notify_user(user, msg_type='user', data=value)
                     else:
-                        logging.info("User not found in tg_bot")
+                        logging.info("User {0} not found in tg_bot".format(value['Исполнитель']))
                     
                 if value['РольИсполнителя'] != '':                    
                     users = roles[value['РольИсполнителя']]
@@ -81,7 +83,7 @@ async def run_service():
                         if isinstance(user, sqlDB.User):
                             await notify_user(user, msg_type='group', data=value)
                         else:
-                            logging.info("User not found in tg_bot")
+                            logging.info("User {0} not found in tg_bot".format(user_))
 
         else:
             logging.info("No new tasks")
