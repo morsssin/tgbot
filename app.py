@@ -48,6 +48,7 @@ if __name__ == "__main__":
     
     loop = asyncio.get_event_loop()
     loop.create_task(notifier.run_service())
+    loop.create_task(notifier.resend_notifications())
     
    
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)

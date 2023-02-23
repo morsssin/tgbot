@@ -13,13 +13,13 @@ class Middleware(BaseMiddleware):
 
     @staticmethod
     async def on_process_message(message: types.Message, data: dict):
-        user = sqlDB.User.basic_auth(message.from_user.id)
-        print(f"[MESSAGE] {user} {user.login} - {message.text}")
+        pass
+        # print(f"[MESSAGE] - {message.text}")
         
     async def on_process_callback(call: types.CallbackQuery, data: dict):
-        user = sqlDB.User.basic_auth(call.from_user.id)
-        print(call)
-        # print(f"[MESSAGE] {user} {user.login} - {message.text}")
+        pass
+        # print(call)
+        # print(f"[MESSAGE] - {message.text}")
         
     # async def __call__(self, 
     #                    handler: types.Callable[[types.Message, types.Dict[str, types.Any]], types.Awaitable[types.Any]],

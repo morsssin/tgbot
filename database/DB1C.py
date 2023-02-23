@@ -138,7 +138,7 @@ class Database_1C:
         """ 
         try:
             r = self.session.get(self.url + '/ERP/hs/tg_bot/tasks', auth=BasicAuth(self.login, self.password), params=params, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С'
                        
         check = check_connection(r)
@@ -149,8 +149,12 @@ class Database_1C:
         dataDB = { dataDB[key]['id'] : value for key, value in enumerate(dataDB) }
         return dataDB
 
-    def users(self): # DONE WORK
-        r = self.session.get(self.url + '/ERP/hs/tg_bot/users', auth=BasicAuth(self.login, self.password), timeout=self.timeout)
+    def users(self):
+        try:
+            r = self.session.get(self.url + '/ERP/hs/tg_bot/users', auth=BasicAuth(self.login, self.password), timeout=self.timeout)
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+            return 'Отсутствует подключение к базе данных 1С' 
+        
         check = check_connection(r)
         if check != None:
             return check
@@ -161,7 +165,7 @@ class Database_1C:
     def GetVariants(self, taskID: str): # DONE WORK
         try:
             r = self.session.get(self.url + '/ERP/hs/tg_bot/getvariants', auth=BasicAuth(self.login, self.password), params={'id':taskID}, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С'        
                 
         check = check_connection(r)
@@ -175,7 +179,7 @@ class Database_1C:
 
         try:
             r = self.session.get(self.url + '/ERP/hs/tg_bot/getroles', auth=BasicAuth(self.login, self.password), timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С'
                        
         check = check_connection(r)
@@ -201,7 +205,7 @@ class Database_1C:
     def GetRolesFull (self):
         try:
             r = self.session.get(self.url + '/ERP/hs/tg_bot/getroles', auth=BasicAuth(self.login, self.password), timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С'
                        
         check = check_connection(r)
@@ -216,7 +220,7 @@ class Database_1C:
     def GetFiles(self, taskID: str): # DONE WORK
         try:
             r = self.session.get(self.url + '/ERP/hs/tg_bot/getfiles', auth=BasicAuth(self.login, self.password), params={'id':taskID}, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
             
         check = check_connection(r)
@@ -232,7 +236,7 @@ class Database_1C:
         data = {"id" : taskID, 'Accept' : accept}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/setaccept', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -241,7 +245,7 @@ class Database_1C:
         data = {"id": taskID, "Comment": comment, "user": user}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/setcomment', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -249,7 +253,7 @@ class Database_1C:
         data = {"id": taskID, "file": file64, "name": file_name, 'extension': file_extension}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/setfile', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
         
@@ -257,7 +261,7 @@ class Database_1C:
         data = {"id": taskID, "user": user}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/setredirect', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -266,7 +270,7 @@ class Database_1C:
         data = {"id": taskID, "users": users}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/addusers', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -274,7 +278,7 @@ class Database_1C:
         data = {"id": taskID, "executor": user}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/setexecutor', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -282,7 +286,7 @@ class Database_1C:
         data = {"id": taskID, "variant": chosen_variant[0], "variantstring": chosen_variant[1]}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/setvariant', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)  
 
@@ -290,9 +294,9 @@ class Database_1C:
         data = {"id": taskID}
         try:
             r = self.session.post(self.url + '/ERP/hs/tg_bot/setexecute', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r) 
 
         
-test_connection = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS)
+test_connection = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)

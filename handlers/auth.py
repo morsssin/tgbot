@@ -68,12 +68,29 @@ async def auth_pass(message: types.Message, state: FSMContext):
         
         cipher = Fernet(DATABASE_SQL.key) 
         password = cipher.encrypt(password.encode('utf-8')).decode('utf-8')
-         
         
+        names_1C = sqlDB.Users1C.select().dicts()
+        
+        for row in names_1C:
+            name = 'NA'
+            name_fio = row['login'].split(' ')
+            
+            if len(name_fio) == 3:
+                name_fio = name_fio[0] + name_fio[1][:1] + name_fio[2][:1]
+            else:
+                name_fio = row['login']
+            
+            print(name_fio)
+            if login_db.lower() == name_fio.lower():
+                name = row['login']
+                break
+                
+        
+
         new_user = sqlDB.User.create(chat_id=message.from_user.id, 
-                                    login = login_db,
+                                    login_db=login_db.lower(),
                                     password = password,
-                                    login_db=login_db.lower())
+                                    name_1C =name )
         new_user.save()
         logging.info(f"{message.from_user.id} - auth successful")
 

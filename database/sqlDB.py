@@ -4,6 +4,7 @@ import logging
 import sqlite3 as sq
 
 from peewee import *
+from datetime import datetime
 
 def generate_uuid(length: int = 11) -> str:
     import string
@@ -27,25 +28,18 @@ class BaseModel(Model):
 
 class User(BaseModel):
     chat_id = BigAutoField()
-    login: str = CharField()
-    password: str = CharField(default="tort101")
     login_db: str = CharField(default="tgbottestuser")
+    password: str = CharField(default="tort101")
+    name_1C: str = CharField()
 
-    
-    @property
-    def get_login(self):
-        return self.login
-    
-    def get_password(self):
-        return self.password
     
     @staticmethod
     def basic_auth(chat_id):
         return User.get_or_none(chat_id=chat_id)
     
-    def get_chat_id(login):
-        user = User.select().where(User.login_db == login.lower()).first()
-        return user.chat_id
+    def name_auth(name):
+        user = User.select().where(User.name_1C == name).first()
+        return user
     
     def login_auth(login):
         user = User.select().where(User.login_db == login.lower()).first()
@@ -60,7 +54,7 @@ class Users1C(BaseModel):
         from database.DB1C import Database_1C
         from config import DATABASE_1C
 
-        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS)
+        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
         users = DB1C.users()  
         
         data = []
@@ -83,10 +77,9 @@ class UserRequest(BaseModel):
     
     from_userID = CharField()
     from_userName = CharField()
-    # to_userID = CharField(null=True)
+    to_userID = CharField(null=True)
     to_userName = CharField(null=True)
     action: str = TextField()
-    # decision: str = TextField(null=True)
 
     @staticmethod
     def new_request(taskID: str, 
@@ -104,32 +97,12 @@ class UserRequest(BaseModel):
                                      action=action,
                                      )
         return request
-
-
-
     
     @staticmethod
     def basic_auth(id):
         return UserRequest.get_or_none(id=id)
-    
-    # def get_text(self):
-    #     if self.action == 'INVITE':
-    #         txt = '<b>{0}</b> приглашает вас присоединиться к задаче \n\n{1}'.format(self.from_userName, self.taskNAME)
-            
-    #     elif self.action == 'TRANSFER':
-    #         txt = '<b>{0}</b> предлагает вам принять задачу \n\n{1}'.format(self.from_userName, self.taskNAME)
-    #     return txt
-            
-    # def det_text_reply(self):
-    #     if self.decision == 'ACCEPT':
-    #         if self.action == 'INVITE':
-    #             txt = '<b>{0}</b> принял задачу "{1}". Выполняется добавление пользователя.'.format(self.to_userName,self.taskNAME)
-                
-    #         elif self.action == 'TRANSFER':
-    #             txt = '<b>{0}</b> принял задачу "{1}". Выполняется переадресация задачи.'.format(self.to_userName,self.taskNAME)
-    #     else:
-    #         txt = '<b>{0}</b> отклонил задачу "{1}"'.format(self.to_userName,self.taskNAME)
-    #     return txt
+
+
 
 class File(BaseModel):
     tgID = TextField(primary_key=True)
@@ -159,13 +132,13 @@ class Tasks(BaseModel):
         from database.DB1C import Database_1C
         from config import DATABASE_1C
 
-        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS)
+        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
         dataDB = DB1C.tasks(params={'Executed':'no', 'Accepted': 'no'})  
         
         data = []
         
         for key, value in dataDB.items():
-            data.append({'date' : value['Дата'],
+            data.append({'date' : datetime.strptime(value['Дата'],'%d.%m.%Y %H:%M:%S') ,
                          'taskID' : key,
                          'task_name' : value['Наименование'],
                          'executor' : value['Исполнитель'],
@@ -173,11 +146,40 @@ class Tasks(BaseModel):
             
         for record in data:
             Tasks.get_or_create(**record)
+            
+class Notifications(BaseModel):
+    id = CharField(primary_key=True)
+    taskID = CharField(null=True)
+    messageID = CharField(null=True)
+    userID = CharField(null=True)
+    date = DateTimeField()
+    text = CharField(null=True)
+    result = CharField(default='SENT')
     
+
+    @staticmethod
+    def new_notification(taskID: [str, int], messageID:[str, int], userID: [str, int], text: str):
+        id_ = generate_uuid(7)
+        new = Notifications.create(id=id_,
+                                   taskID=taskID,
+                                   messageID=messageID,
+                                   userID=userID,
+                                   text = text,
+                                   date=datetime.today())
+        return new
+    
+    @staticmethod
+    def basic_auth(id):
+        return Notifications.get_or_none(id=id)  
+    
+    def delete_old():
+        query = Notifications.select().where(Notifications.result != 'SENT')
+        for item in query:
+            item.delete_instance()
 
 def create_tables():
     # db.connect()    
-    db.create_tables([User, UserRequest, File, Tasks, Users1C])
+    db.create_tables([User, UserRequest, File, Tasks, Users1C, Notifications])
     Tasks.base_init()
     Users1C.base_init()
     

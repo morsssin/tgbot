@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import typing
-import logging
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
 
 from database import sqlDB
-from database.DB1C import Database_1C
 
 
 ### Стартовая клавиатура
@@ -160,11 +158,6 @@ class UsersMenu(InlineKeyboardMarkup):
         for user in user_list:
             user_ = sqlDB.Users1C.login_auth(user)
             
-            # user_ = sqlDB.User.login_auth(user)
-            # if user_ != None:
-            #     chat_id = user_.chat_id
-            # else:
-            #     chat_id = '_'
             self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(USER=user_.id, ACTION='USERS')))
         
         self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(USER='_', ACTION='CANCEL_CALL_B'))) 
@@ -215,8 +208,19 @@ class CompleteMenu(InlineKeyboardMarkup):
     
     class CallbackData:
         COMPLETE_CB = CallbackData("FILTER", "ACTION")
+
+
+class NotificationKB(InlineKeyboardMarkup):
+    def __init__(self, taskID, notificationID):
+        super().__init__(row_width=2)
         
-        
+        self.show  = InlineKeyboardButton('Перейти к задаче', callback_data=self.CallbackData.NOTIFY_CB.new(TASK_ID=taskID, NOT_ID=notificationID))
+        self.hide  = InlineKeyboardButton('Cкрыть', callback_data=self.CallbackData.NOTIFY_CB.new(TASK_ID='cancel_call_b', NOT_ID=notificationID))        
+        self.add(self.show, self.hide)
+
+    
+    class CallbackData:
+        NOTIFY_CB = CallbackData("NOTIFY", "TASK_ID", 'NOT_ID')        
 
 ### клавиатура отмены действия
 cancel_kb = InlineKeyboardMarkup()
@@ -227,8 +231,6 @@ cancel_kb.add(cancel_button)
 option_kb = InlineKeyboardMarkup()
 accept_button = InlineKeyboardButton('✅ Принять', callback_data='accept_b')
 option_kb.row(accept_button, cancel_button)
-
-
 
 ### клавиатура - пользователь для приглашения
 add_user_kb = InlineKeyboardMarkup()
