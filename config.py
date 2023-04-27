@@ -10,9 +10,11 @@ class BOT_SETTINGS:
 
 ## 1C data
 class DATABASE_1C:     
-    URL = 'http://10.10.100.150:8079'
-    LOGIN = 'tgbottestuser'
-    PASS = 'tort101'
+    URL = 'https://10.10.10.196:12443/erp1/hs/tg_bot'
+    # LOGIN = 'tgbottestuser'
+    # PASS = 'tort101'
+    LOGIN = 'TgBot'
+    PASS = 'Ta4Gi2zy'
     # PASS = 'gAAAAABjckCfg-DLrkd5TyBuyrjg2T7NVuHA55P3TW8WymdVA98ibh6hs7tB_0GLLqcsNYRK3Y9v1Z3w9D5w0-4C45EGL--tpw=='
 
 class DATABASE_REDIS:     

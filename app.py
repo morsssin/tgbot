@@ -11,7 +11,7 @@ from load_bot import bot, dp
 
 import notifier
 import middleware
-
+import urllib3
 
 ### Функции
 async def on_startup(dp):
@@ -33,6 +33,8 @@ async def on_shutdown(dp):
 ### Запуск бота
 if __name__ == "__main__":
     from handlers import client, auth
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
     
     logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Logs')
     if not os.path.exists(logs_dir):
