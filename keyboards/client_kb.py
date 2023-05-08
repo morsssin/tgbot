@@ -160,7 +160,7 @@ class UsersMenu(InlineKeyboardMarkup):
             
             self.add(InlineKeyboardButton(text=user, callback_data=self.CallbackData.USER_CB.new(USER=user_.id, ACTION='USERS')))
         
-        self.add(InlineKeyboardButton('❌ Отмена', callback_data=self.CallbackData.USER_CB.new(USER='_', ACTION='CANCEL_CALL_B'))) 
+        self.add(InlineKeyboardButton('◀️ Назад', callback_data=self.CallbackData.USER_CB.new(USER='_', ACTION='BACK'))) 
                                
     class CallbackData:
         USER_CB = CallbackData("USERS", "USER", 'ACTION')
@@ -220,7 +220,20 @@ class NotificationKB(InlineKeyboardMarkup):
 
     
     class CallbackData:
-        NOTIFY_CB = CallbackData("NOTIFY", "TASK_ID", 'NOT_ID')        
+        NOTIFY_CB = CallbackData("NOTIFY", "TASK_ID", 'NOT_ID')    
+        
+        
+class AddUserKB(InlineKeyboardMarkup):
+    def __init__(self):
+        super().__init__(row_width=2)
+        
+        self.accept  = InlineKeyboardButton('✅ Принять', callback_data=self.CallbackData.ADDUSER_CB.new(ACTION='ACCEPT'))
+        self.back  = InlineKeyboardButton('◀️ Назад', callback_data=self.CallbackData.ADDUSER_CB.new(ACTION='BACK'))        
+        self.add(self.accept, self.back)
+
+    
+    class CallbackData:
+        ADDUSER_CB = CallbackData("ADDUSER", "ACTION")
 
 ### клавиатура отмены действия
 cancel_kb = InlineKeyboardMarkup()
@@ -230,11 +243,14 @@ cancel_kb.add(cancel_button)
 ### клафиатура принятия варианта
 option_kb = InlineKeyboardMarkup()
 accept_button = InlineKeyboardButton('✅ Принять', callback_data='accept_b')
-option_kb.row(accept_button, cancel_button)
+back_task_button = InlineKeyboardButton('◀️ Назад', callback_data='back_task')
+option_kb.row(accept_button, back_task_button)
 
 ### клавиатура - пользователь для приглашения
 add_user_kb = InlineKeyboardMarkup()
-add_user_b = InlineKeyboardButton('✅ Принять', callback_data='users_invite')
+add_user_b = InlineKeyboardButton('✅ Принять', callback_data='usersinvite')
+back_users_button = InlineKeyboardButton('◀️ Назад', callback_data='usersinvite_back')
+
 add_user_kb.row(add_user_b, cancel_button)
 
 # ### клавиатура для выполненных работ

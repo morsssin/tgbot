@@ -13,6 +13,7 @@ from keyboards.client_kb import (StartMenu,
                                  option_kb,
                                  add_user_kb,
                                  NotificationKB,
+                                 AddUserKB,
                                  # add_work_done_kb,
                                  # accept_work_done_kb
                                  )

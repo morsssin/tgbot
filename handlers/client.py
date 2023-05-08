@@ -200,6 +200,7 @@ async def full_list_tasks(call: types.CallbackQuery, state: FSMContext, callback
     DB1C = Database_1C(user.login_db, user.password)
     dataDB = DB1C.tasks(text_mode[mode]['params'])
     roles = DB1C.GetRoles(user.name_1C.lower())
+    print(roles)
     
     user_data = await state.get_data()
     
@@ -214,7 +215,7 @@ async def full_list_tasks(call: types.CallbackQuery, state: FSMContext, callback
         
     elif free_cond:
         if isinstance(roles, list):
-            dataDB = {key:value for i, (key, value) in enumerate(dataDB.items()) if ((~(dataDB[key]['РольИсполнителя'] in roles))&(dataDB[key]['Исполнитель'].lower() != user.name_1C.lower()))}
+            dataDB = {key:value for i, (key, value) in enumerate(dataDB.items()) if (((dataDB[key]['РольИсполнителя'] not in roles))&(dataDB[key]['Исполнитель'].lower() != user.name_1C.lower()))}
         else:
             dataDB = {key:value for i, (key, value) in enumerate(dataDB.items()) if (dataDB[key]['Исполнитель'].lower() != user.name_1C.lower())}
    
@@ -384,7 +385,7 @@ async def save_comment(message: types.Message, state: FSMContext):
     if isinstance(dataDB, dict):
         is_executor = (dataDB['Исполнитель'].lower() == user.name_1C.lower())
     else:
-        await send_alert(message, text=req, time=3)
+        await send_alert(message, text=dataDB, time=3)
         await state.reset_state(with_data=False)
         return
         
@@ -490,7 +491,9 @@ async def add_user(call: types.CallbackQuery,  state: FSMContext, callback_data:
     
     user_data = await state.get_data()
     user = sqlDB.User.basic_auth(call.from_user.id)
-    DB1C = Database_1C(user.login_db, user.password)       
+    DB1C = Database_1C(user.login_db, user.password)
+    
+    logging.info(f"{call.from_user.id} {user.login_db} - add user - taskID:{user_data['taskID']}")
 
     user_request = sqlDB.UserRequest.new_request(taskID=user_data['taskID'],
                                                      taskNAME = user_data['task_message'],
@@ -499,65 +502,111 @@ async def add_user(call: types.CallbackQuery,  state: FSMContext, callback_data:
                                                      action = callback_data['ACTION'],
                                                      )    
     user_request.save()
-    logging.info(f"{call.from_user.id} {user.login_db} - add user - taskID:{user_data['taskID']}")
        
     users_list = DB1C.users()
-    msg = await call.message.answer('Выберите пользователя:', reply_markup=kb.UsersMenu(users_list))
-    await state.update_data(add_msgID = msg.message_id)
+    with suppress(MessageNotModified):
+        await bot.edit_message_text(text='Выберите пользователя:', 
+                            chat_id = call.from_user.id,
+                            message_id = user_data['start_msgID'],
+                            reply_markup=kb.UsersMenu(users_list)) 
+    
+    # msg = await call.message.answer('Выберите пользователя:', reply_markup=kb.UsersMenu(users_list))   
+    # await state.update_data(add_msgID = msg.message_id)
     await state.update_data(user_requestID = user_request.id)
+
 
 async def choose_user(call: types.CallbackQuery,  state: FSMContext, callback_data: dict):
     
     user_data = await state.get_data()
-    user_request = sqlDB.UserRequest.basic_auth(user_data['user_requestID']) 
     user = sqlDB.User.basic_auth(call.from_user.id)
-    user_to = sqlDB.Users1C.get_or_none(id=callback_data['USER']).login
+    DB1C = Database_1C(user.login_db, user.password)
     
-    logging.info(f"{call.from_user.id} {user.login_db} - choose user - user to:{user_to} -  taskID:{user_data['taskID']}")
- 
-    user_request.to_userID = sqlDB.User.name_auth(name=user_to)
-    user_request.to_userName = user_to
-    user_request.save()
-    with suppress(MessageNotModified):
-        await bot.edit_message_text(text=f'Подтвердите выбор: {user_request.to_userName}' , 
-                                    chat_id = call.from_user.id,
-                                    message_id=user_data['add_msgID'],
-                                    reply_markup=kb.add_user_kb)
+    
+    if callback_data['ACTION'] == 'BACK':
+        taskID = user_data['taskID']
+        dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
+        task_message, _ = getTaskDescription(dataDB)
+                 
+        with suppress(MessageNotModified):
+            await bot.edit_message_text(text=task_message, 
+                                chat_id = call.from_user.id,
+                                message_id = user_data['start_msgID'],
+                                reply_markup=kb.TaskActionMoreMenu())
+        return  
+    
+    
+    if callback_data['ACTION'] == 'USERS':   
+        user_request = sqlDB.UserRequest.basic_auth(user_data['user_requestID']) 
+        user_to = sqlDB.Users1C.get_or_none(id=callback_data['USER']).login
+        
+        logging.info(f"{call.from_user.id} {user.login_db} - choose user - user to:{user_to} -  taskID:{user_data['taskID']}")
+     
+        user_request.to_userID = sqlDB.User.name_auth(name=user_to)
+        user_request.to_userName = user_to
+        user_request.save()
+        with suppress(MessageNotModified):
+            await bot.edit_message_text(text=f'Подтвердите выбор: {user_request.to_userName}' , 
+                                        chat_id = call.from_user.id,
+                                        message_id=user_data['start_msgID'],
+                                        reply_markup=kb.AddUserKB())
     
 
-async def invite_user (call: types.CallbackQuery,  state: FSMContext):
+async def invite_user (call: types.CallbackQuery,  state: FSMContext, callback_data: dict):
       
     user_data = await state.get_data()
     user_request = sqlDB.UserRequest.basic_auth(user_data['user_requestID'])
     
     user: sqlDB.User = sqlDB.User.basic_auth(user_request.from_userID)    
     DB1C = Database_1C(user.login_db, user.password)
-
     
-    if user_request.action == 'INVITE':
-        logging.info(f"{call.from_user.id} {user.login_db} - invite user:{user_request.to_userName} - taskID:{user_data['taskID']}")
-        req = DB1C.AddUsers(user_request.taskID, [user_request.to_userName]) 
-        txt = 'Пользователь приглашен'  
-        messsage_to = f'{user_request.from_userName} пригласил(а) Вас в задачу {user_request.taskNAME}'
+    if callback_data['ACTION'] == 'BACK':
 
-    elif user_request.action == 'TRANSFER':
-        logging.info(f"{call.from_user.id} {user.login_db} - transfer to user:{user_request.to_userName} - taskID:{user_data['taskID']}")
-        req = DB1C.SetRedirect(user_request.taskID, user_request.to_userName)      
-        txt = 'Задача передана'
-        messsage_to = f'{user_request.from_userName} передал(а) Вам задачу {user_request.taskNAME}'
+        users_list = DB1C.users()
+        with suppress(MessageNotModified):
+            await bot.edit_message_text(text='Выберите пользователя:', 
+                                chat_id = call.from_user.id,
+                                message_id = user_data['start_msgID'],
+                                reply_markup=kb.UsersMenu(users_list))
         
-    if req != None:
-        await bot.answer_callback_query(call.id, text=req, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
-        await bot.delete_message(chat_id=call.from_user.id, message_id = call.message.message_id)
-        return  
-
-    await bot.answer_callback_query(call.id, text=txt, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+        
+    if callback_data['ACTION'] == 'ACCEPT':
+        if user_request.action == 'INVITE':
+            logging.info(f"{call.from_user.id} {user.login_db} - invite user:{user_request.to_userName} - taskID:{user_data['taskID']}")
+            req = DB1C.AddUsers(user_request.taskID, [user_request.to_userName]) 
+            txt = 'Пользователь приглашен'  
+            messsage_to = f'{user_request.from_userName} пригласил(а) Вас в задачу {user_request.taskNAME}'
     
-    if user_request.to_userID:
-        await bot.send_message(chat_id=user_request.to_userID, text=messsage_to, reply_markup=kb.NotificationKB(taskID=user_request.taskID))
-
+        elif user_request.action == 'TRANSFER':
+            logging.info(f"{call.from_user.id} {user.login_db} - transfer to user:{user_request.to_userName} - taskID:{user_data['taskID']}")
+            req = DB1C.SetRedirect(user_request.taskID, user_request.to_userName)      
+            txt = 'Задача передана'
+            messsage_to = f'{user_request.from_userName} передал(а) Вам задачу {user_request.taskNAME}'
+            
+        if req != None:
+            await bot.answer_callback_query(call.id, text=req, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+            await bot.delete_message(chat_id=call.from_user.id, message_id = call.message.message_id)
+            return  
     
-       
+        
+        if user_request.to_userID:
+            new_not = sqlDB.Notifications.new_notification(taskID=user_request.taskID, messageID=0, userID = user_request.to_userID, text = messsage_to)
+            new_not.save()
+            keyboard = kb.NotificationKB(taskID=user_request.taskID, notificationID=new_not.id)
+            
+            msg = await bot.send_message(chat_id=user_request.to_userID, text=messsage_to, reply_markup=keyboard)
+            new_not.messageID = msg.message_id
+            new_not.save()
+    
+        await bot.answer_callback_query(call.id, text=txt, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+        dataDB = DB1C.tasks(params={'id' : user_data['taskID']})[user_data['taskID']]
+        task_message, _ = getTaskDescription(dataDB)
+                 
+        with suppress(MessageNotModified):
+            await bot.edit_message_text(text=task_message, 
+                                chat_id = call.from_user.id,
+                                message_id = user_data['start_msgID'],
+                                reply_markup=kb.TaskActionMoreMenu())
+            
 
 
 ###  вывести дополнительные варианты
@@ -590,8 +639,15 @@ async def show_options(call: types.CallbackQuery, state: FSMContext, callback_da
             logging.info(f"{call.from_user.id} {user.login_db} - no options available - taskID:{user_data['taskID']}")
 
             await state.update_data(complete_MODE = 'DONE')
-            msg = await call.message.answer('Подтвердите выполнение задачи', reply_markup=kb.option_kb)
-            await state.update_data(add_msgID = msg.message_id)
+            with suppress(MessageNotModified):
+                await bot.edit_message_text(text='Подтвердите выполнение задачи', 
+                                    chat_id = call.from_user.id,
+                                    message_id = user_data['start_msgID'],
+                                    reply_markup=kb.option_kb) 
+            
+            
+            # msg = await call.message.answer('Подтвердите выполнение задачи', reply_markup=kb.option_kb)
+            # await state.update_data(add_msgID = msg.message_id)
             return
             
         else:
@@ -619,8 +675,15 @@ async def confirm_option(call: types.CallbackQuery,  state: FSMContext, callback
     
     await state.update_data(chosen_variant = [chosen_var, chones_var_name]) 
     msg_txt = 'Подтвердите выбор варианта: "{0}"'.format(chones_var_name)
-    msg = await call.message.answer(msg_txt, reply_markup=kb.option_kb)
-    await state.update_data(add_msgID = msg.message_id)
+
+    with suppress(MessageNotModified):
+        await bot.edit_message_text(text=msg_txt, 
+                            chat_id = call.from_user.id,
+                            message_id = user_data['start_msgID'],
+                            reply_markup=kb.option_kb) 
+    
+    # msg = await call.message.answer(msg_txt, reply_markup=kb.option_kb)
+    # await state.update_data(add_msgID = msg.message_id)
 
 async def option_accepted(call: types.CallbackQuery,  state: FSMContext): 
     user = sqlDB.User.basic_auth(call.from_user.id) 
@@ -641,9 +704,56 @@ async def option_accepted(call: types.CallbackQuery,  state: FSMContext):
         return
        
     await bot.answer_callback_query(call.id, text='Выполнено', show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
-    await bot.delete_message(chat_id=call.from_user.id, message_id=call.message.message_id)
+    
+    # await bot.delete_message(chat_id=call.from_user.id, message_id=call.message.message_id)
     await del_files(call, state)
     await full_list_move(call, state)
+
+
+async def option_declined(call: types.CallbackQuery,  state: FSMContext): 
+    user = sqlDB.User.basic_auth(call.from_user.id) 
+    DB1C = Database_1C(user.login_db, user.password) 
+    user_data = await state.get_data() 
+    taskID = user_data['taskID']
+    
+    logging.info(f"{call.from_user.id} {user.login_db} - option_declined - taskID:{user_data['taskID']}")
+    
+    dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
+    task_message, _ = getTaskDescription(dataDB)
+
+    
+    if user_data['complete_MODE'] == 'DONE':
+        if isinstance(dataDB, dict):
+            is_executor = (dataDB['Исполнитель'].lower() == user.name_1C.lower())
+        
+        
+        with suppress(MessageNotModified):
+            await bot.edit_message_text(text=task_message, 
+                                chat_id = call.from_user.id,
+                                message_id = user_data['start_msgID'],
+                                reply_markup=kb.TaskActionMenu(accepted=dataDB['ПринятаКИсполнению'], done=dataDB['Выполнена'], is_executor=is_executor))
+        return
+        
+        
+    elif user_data['complete_MODE'] == 'MORE':
+        variants = DB1C.GetVariants(taskID)
+ 
+        if isinstance(variants, list):
+            logging.info(f"{call.from_user.id} {user.login_db} - num options:{len(variants)} - taskID:{user_data['taskID']}")
+            keyboard = kb.VarsMenu(variants)
+            variants_new = {}
+            for i in variants:
+                variants_new[i['ЗначениеВарианта']] = i['ПредставлениеВарианта']
+           
+            await state.update_data(complete_MODE = 'MORE')
+            await state.update_data(task_variants = variants_new)
+            
+            with suppress(MessageNotModified):
+                await bot.edit_message_text(text=task_message, 
+                                    chat_id = call.from_user.id,
+                                    message_id = user_data['start_msgID'],
+                                    reply_markup=keyboard) 
+            return
 
       
 async def del_files(call: types.CallbackQuery, state: FSMContext):
@@ -780,12 +890,13 @@ def reg_handlers_client(dp: Dispatcher):
     # dp.register_callback_query_handler(complete_task, kb.CompleteMenu.CallbackData.COMPLETE_CB.filter(ACTION=['DONE', 'MORE'])) 
     dp.register_callback_query_handler(confirm_option, kb.VarsMenu.CallbackData.VARS.filter(ACTION=['CHOOSE'])) 
     dp.register_callback_query_handler(option_accepted, Text(contains=('accept_b'), ignore_case=True))
+    dp.register_callback_query_handler(option_declined, Text(contains=('back_task'), ignore_case=True))
   
     
     ### Добавить пользователя
     dp.register_callback_query_handler(add_user,          kb.TaskActionMoreMenu.CallbackData.MOREVAR_CB.filter(ACTION=['INVITE', 'TRANSFER']), state="*")
-    dp.register_callback_query_handler(choose_user,       kb.UsersMenu.CallbackData.USER_CB.filter(ACTION=['USERS']))
-    dp.register_callback_query_handler(invite_user, Text(startswith="users_invite"))
+    dp.register_callback_query_handler(choose_user,       kb.UsersMenu.CallbackData.USER_CB.filter())
+    dp.register_callback_query_handler(invite_user,       kb.AddUserKB.CallbackData.ADDUSER_CB.filter())
     # dp.register_callback_query_handler(tasksend_reply,    kb.UsersNotification.CallbackData.USER_NOT.filter(ACTION=['ACCEPT', 'DECLINE']))
 
 
