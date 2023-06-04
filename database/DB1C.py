@@ -5,6 +5,9 @@ import warnings
 import logging
 import requests
 import pandas as pd
+import urllib
+
+
 
 from config import DATABASE_1C
 from base64 import b64encode
@@ -137,7 +140,8 @@ class Database_1C:
 
         """ 
         try:
-            r = self.session.get(self.url + '/tasks', auth=BasicAuth(self.login, self.password), params=params, timeout=self.timeout, verify=False)
+            data = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+            r = self.session.get(self.url + '/tasks', auth=BasicAuth(self.login, self.password), params=data, timeout=self.timeout, verify=False)
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
             return 'Отсутствует подключение к базе данных 1С'
                        
@@ -276,6 +280,7 @@ class Database_1C:
 
     def SetExecutor(self, taskID: str,  user : str): # DONE WORK
         data = {"id": taskID, "executor": user}
+        data = urllib.parse.urlencode(data, quote_via=urllib.parse.quote)
         try:
             r = self.session.post(self.url + '/setexecutor', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, verify=False)
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):

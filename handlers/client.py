@@ -200,7 +200,6 @@ async def full_list_tasks(call: types.CallbackQuery, state: FSMContext, callback
     DB1C = Database_1C(user.login_db, user.password)
     dataDB = DB1C.tasks(text_mode[mode]['params'])
     roles = DB1C.GetRoles(user.name_1C.lower())
-    print(roles)
     
     user_data = await state.get_data()
     

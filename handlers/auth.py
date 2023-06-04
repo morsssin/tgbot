@@ -80,7 +80,6 @@ async def auth_pass(message: types.Message, state: FSMContext):
             else:
                 name_fio = row['login']
             
-            print(name_fio)
             if login_db.lower() == name_fio.lower():
                 name = row['login']
                 break
