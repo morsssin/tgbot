@@ -40,10 +40,10 @@ async def notify_user(user: sqlDB.User, msg_type: str, data: dict):
 
 async def run_service():
     logging.info(f'[{Config.NAME}] Сервис запущен!')
-    while True:
-        from database.DB1C import Database_1C
-        from config import DATABASE_1C
+    from database.DB1C import Database_1C
+    from config import DATABASE_1C
 
+    while True:
         DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
         try_connection = True
         
@@ -95,8 +95,8 @@ async def run_service():
             logging.info("No new tasks")
             
 
-        sqlDB.Tasks.base_init()
-        await asyncio.sleep(60)
+        sqlDB.Tasks.update_DB(dataDB)
+        await asyncio.sleep(120)
 
 
 async def resend_notifications():
@@ -129,12 +129,32 @@ async def resend_notifications():
                     
                     logging.info(f"resend_notifications - {user.login_db} - notification send successfull")
                 except (exceptions.BotBlocked, exceptions.BadRequest, exceptions.UserDeactivated):
-                    logging.error(f"resend_notifications - {user.login_db} - error")        
-        
-        
-        await asyncio.sleep(60)
-        
-        
+                    logging.error(f"resend_notifications - {user.login_db} - error")
+
+
+        await asyncio.sleep(10000)
+
+
+async def update_database():
+    from database.DB1C import Database_1C
+    from config import DATABASE_1C
+    logging.info('Update database on')
+
+    while True:
+        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
+        try_connection = True
+
+        while try_connection:
+            dataDB = DB1C.tasks()
+
+            if (isinstance(dataDB, dict)):
+                try_connection = False
+            else:
+                logging.info("No connection to 1C")
+                await asyncio.sleep(60)
+
+        sqlDB.Tasks.base_init(dataDB)
+        await asyncio.sleep(300)
         
         
         

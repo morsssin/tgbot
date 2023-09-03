@@ -15,8 +15,45 @@ def generate_uuid(length: int = 11) -> str:
         uuid = uuid + random.choice(template)
     return uuid
 
+def get_data_from_dataDB(dataDB):
+    data = []
+    for key, value in dataDB.items():
+        data.append({'date': datetime.strptime(value['Дата'], '%d.%m.%Y %H:%M:%S'),
+                     'taskID': key,
+                     'task_name': value['Наименование'],
+                     'executor': value['Исполнитель'],
+                     'group_executors': value['РольИсполнителя'],
+                     'number': value['Номер'],
+                     'date_1c': value['Дата'],
+                     'name': value['Наименование'],
+                     'completed': value['Выполнена'],
+                     'author': value['Автор'],
+                     'group_of_executors': value['ГруппаИсполнителейЗадач'],
+                     'execution_date': value['ДатаИсполнения'],
+                     'start_date': value['ДатаНачала'],
+                     'date_of_acceptance_and_execution': value['ДатаПринятияКИсполнению'],
+                     'description': value['Описание'],
+                     'subject': value['Предмет'],
+                     'accepted_to_implementation': value['ПринятаКИсполнению'],
+                     'execution_result': value['РезультатВыполнения'],
+                     'status_business_process': value['СостояниеБизнесПроцесса'],
+                     'period_of_execution': value['СрокИсполнения'],
+                     'crm_execution_option': value['CRM_ВариантВыполнения'],
+                     'crm_iteration': value['CRM_Итерация'],
+                     'crm_contact_person': value['CRM_КонтактноеЛицо'],
+                     'crm_partner': value['CRM_Партнер'],
+                     'crm_forwarded': value['CRM_Переадресована'],
+                     'crm_route_point': value['CRM_ТочкаМаршрута'],
+                     'performance': value['Представление'],
+                     'comment': value['Комментарий'],
+                     'additional_executors': value['ДополнительныеИсполнители'],
+                     })
+    return data
+
+
+
 #  Создание базы данных
-db = SqliteDatabase(r'C:\Users\ПеньковДА\Desktop\tgbot\tgbot\bot_database.db', pragmas={'journal_mode': 'wal', 
+db = SqliteDatabase(r'bot_database.db', pragmas={'journal_mode': 'wal', 
                                                 'foreign_keys': "on",
                                                 'wal_autocheckpoint': 10})
 
@@ -121,31 +158,60 @@ class File(BaseModel):
 class Tasks(BaseModel):
     id = AutoField(primary_key=True)
     date = DateTimeField()
-    taskID = TextField()
+    taskID = TextField(unique=True)
     task_name = TextField(null=True)
     executor = TextField(null=True)
     group_executors = TextField(null=True)
-    
-    
+
+    number = TextField(null=True)
+    date_1c = TextField(null=True)
+    name = TextField(null=True)
+    completed = TextField(null=True)
+    author = TextField(null=True)
+    group_of_executors = TextField(null=True)
+    execution_date = TextField(null=True)
+    start_date = TextField(null=True)
+    date_of_acceptance_and_execution = TextField(null=True)
+    description = TextField(null=True)
+    subject = TextField(null=True)
+    accepted_to_implementation = TextField(null=True)
+    execution_result = TextField(null=True)
+    status_business_process = TextField(null=True)
+    period_of_execution = TextField(null=True)
+    crm_execution_option = TextField(null=True)
+    crm_iteration = TextField(null=True)
+    crm_contact_person = TextField(null=True)
+    crm_partner = TextField(null=True)
+    crm_forwarded = TextField(null=True)
+    crm_route_point = TextField(null=True)
+    performance = TextField(null=True)
+    comment = TextField(null=True)
+    additional_executors = TextField(null=True)
+
     @staticmethod
     def base_init():
         from database.DB1C import Database_1C
         from config import DATABASE_1C
 
-        DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
-        dataDB = DB1C.tasks(params={'Executed':'no', 'Accepted': 'no'})  
-        
-        data = []
-        
-        for key, value in dataDB.items():
-            data.append({'date' : datetime.strptime(value['Дата'],'%d.%m.%Y %H:%M:%S') ,
-                         'taskID' : key,
-                         'task_name' : value['Наименование'],
-                         'executor' : value['Исполнитель'],
-                         'group_executors': value['РольИсполнителя']})
-            
-        for record in data:
-            Tasks.get_or_create(**record)
+        try:
+            DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
+            dataDB = DB1C.tasks()
+        except:
+            logging.warning('Ошибки при загрузке БД')
+
+        if isinstance(dataDB, dict):
+            data = get_data_from_dataDB(dataDB)
+            for record in data:
+                result = (Tasks.insert(**record).on_conflict('replace').execute())
+    @staticmethod
+    def update_DB(dataDB):
+        if isinstance(dataDB, dict):
+            data = get_data_from_dataDB(dataDB)
+            for record in data:
+                # Tasks.get_or_create(**record)
+                result = (Tasks.insert(**record).on_conflict('replace').execute())
+
+
             
 class Notifications(BaseModel):
     id = CharField(primary_key=True)
@@ -170,8 +236,9 @@ class Notifications(BaseModel):
     
     @staticmethod
     def basic_auth(id):
-        return Notifications.get_or_none(id=id)  
-    
+        return Notifications.get_or_none(id=id)
+
+    @staticmethod
     def delete_old():
         query = Notifications.select().where(Notifications.result != 'SENT')
         for item in query:

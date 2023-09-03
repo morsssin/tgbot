@@ -20,14 +20,42 @@ import keyboards as kb
 from config import BOT_SETTINGS
 from load_bot import bot, dp
 
-### 
 from database.DB1C import Database_1C
 from database import sqlDB
 
 
-# logging.basicConfig(level=logging.INFO)
 
-    
+
+data_DB_dict = {'number': 'Номер',
+                'date_1c': 'Дата',
+                'task_name': 'Наименование',
+                'completed': 'Выполнена',
+                'author': 'Автор',
+                'group_of_executors': 'ГруппаИсполнителейЗадач',
+                'execution_date': 'ДатаИсполнения',
+                'start_date': 'ДатаНачала',
+                'date_of_acceptance_and_execution': 'ДатаПринятияКИсполнению',
+                'description': 'Описание',
+                'subject': 'Предмет',
+                'accepted_to_implementation': 'ПринятаКИсполнению',
+                'execution_result': 'РезультатВыполнения',
+                'status_business_process': 'СостояниеБизнесПроцесса',
+                'period_of_execution': 'СрокИсполнения',
+                'crm_execution_option': 'CRM_ВариантВыполнения',
+                'crm_iteration': 'CRM_Итерация',
+                'crm_contact_person': 'CRM_КонтактноеЛицо',
+                'crm_partner': 'CRM_Партнер',
+                'crm_forwarded': 'CRM_Переадресована',
+                'crm_route_point': 'CRM_ТочкаМаршрута',
+                'executor': 'Исполнитель',
+                'group_executors': 'РольИсполнителя',
+                'performance': 'Представление',
+                'taskID': 'id',
+                'comment': 'Комментарий',
+                'additional_executors': 'ДополнительныеИсполнители',
+}
+
+
 def getTaskDescription(dataDB: dict):
         
     date_task = dt.strptime(dataDB['Дата'], '%d.%m.%Y %H:%M:%S').strftime('%d/%m/%Y') # %d.%m.%Y %H:%M:%S     
@@ -170,10 +198,14 @@ async def full_list_tasks(call: types.CallbackQuery, state: FSMContext, callback
     user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
     logging.info(f"{call.from_user.id} {user.login_db} - show full list")
     
-    text_mode = {'FULL' : {'text' : text(hbold('Входящие задачи:')), 'params' : {'Executed':'no', 'Accepted': 'no'}},
+    text_mode = {'FULL' : {'text' : text(hbold('Входящие задачи:')), 'params' : {'Executed':'no', 
+                                                                                 'Accepted': 'no'
+                                                                                 }},
                  'USER' : {'text' : text(hbold('Текущие задачи:')), 'params' : {'Executed':'no', 'Executor': user.name_1C, 'Accepted': 'yes'}},
                  'USER_ALL' : {'text' : text(hbold('Выполненные задачи:')), 'params' : {'Executor': user.name_1C, 'Executed':'yes'}},
-                 'FREE' : {'text' : text(hbold('Свободные задачи:')), 'params' : {'Executed':'no', 'Accepted' : 'no'}},
+                 'FREE' : {'text' : text(hbold('Свободные задачи:')), 'params' : {'Executed':'no', 
+                                                                                  'Accepted' : 'no'
+                                                                                  }},
                  'PAST' : {'text' : text(hbold('Просроченные задачи:')), 
                            'params' : {'Executed' : 'no', 
                                        'DateBegin': '20001231235959', 
@@ -199,6 +231,9 @@ async def full_list_tasks(call: types.CallbackQuery, state: FSMContext, callback
      
     DB1C = Database_1C(user.login_db, user.password)
     dataDB = DB1C.tasks(text_mode[mode]['params'])
+    if not isinstance(dataDB, dict):
+        return await bot.answer_callback_query(call.id, text=dataDB, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+
     roles = DB1C.GetRoles(user.name_1C.lower())
     
     user_data = await state.get_data()
@@ -318,12 +353,14 @@ async def accept_task(call: types.CallbackQuery, state: FSMContext, callback_dat
         return await bot.answer_callback_query(call.id, text = dataDB, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
     
     if (dataDB['Исполнитель'].lower() == user.name_1C.lower())|(dataDB['Исполнитель'].lower() == ""):
-        req = DB1C.SetAccept(taskID=user_data['taskID'], accept=accept)       
+        req = DB1C.SetAccept(taskID=user_data['taskID'], accept=accept)
+        # req = None
         if req != None:
             await bot.answer_callback_query(call.id, text=req, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
             return
         
-        if (dataDB['Исполнитель'].lower() == ""):
+        if (dataDB['Исполнитель'].lower() == "")&(accept=='yes'):
+            print(user_data['taskID'], user.name_1C)
             req = DB1C.SetExecutor(taskID=user_data['taskID'], user=user.name_1C)
             if req != None:
                 await bot.answer_callback_query(call.id, text=req, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)

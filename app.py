@@ -41,7 +41,7 @@ if __name__ == "__main__":
         os.makedirs(logs_dir)
         
     filename = os.path.join(logs_dir, datetime.date.today().strftime("%d_%m_%Y") + "_log.log")
-    logging.basicConfig(level=logging.INFO, filename=filename, filemode="a", 
+    logging.basicConfig(level=logging.INFO, filename=filename, filemode="a",
                         format='[%(asctime)s] %(filename)s [LINE:%(lineno)d] #%(levelname)-8s %(message)s')
      
     client.reg_handlers_client(dp)
@@ -51,6 +51,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(notifier.run_service())
     loop.create_task(notifier.resend_notifications())
+    loop.create_task(notifier.update_database())
     
    
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)

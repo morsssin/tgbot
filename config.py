@@ -10,12 +10,12 @@ class BOT_SETTINGS:
 
 ## 1C data
 class DATABASE_1C:     
-    URL = 'https://10.10.10.196:12443/erp1/hs/tg_bot'
-    # LOGIN = 'tgbottestuser'
-    # PASS = 'tort101'
-    LOGIN = 'TgBot'
-    PASS = 'Ta4Gi2zy'
-    # PASS = 'gAAAAABjckCfg-DLrkd5TyBuyrjg2T7NVuHA55P3TW8WymdVA98ibh6hs7tB_0GLLqcsNYRK3Y9v1Z3w9D5w0-4C45EGL--tpw=='
+    URL = 'http://key.lk-ag.ru:8079/erpuhcrm/hs/tg_bot'
+    LOGIN = 'tgbotuser'
+    PASS = 'djrhtynshdfe%'    
+    # URL = 'https://10.10.10.196:12443/erp1/hs/tg_bot'
+    # LOGIN = 'TgBot'
+    # PASS = 'Ta4Gi2zy'
 
 class DATABASE_REDIS:     
     REDIS_HOST = 'localhost'
@@ -25,4 +25,5 @@ class DATABASE_REDIS:
     
 class DATABASE_SQL:
     key = b'SePo13rKZzO8TY3AtB24aQSDJ-qHYuUw9ocJobndtYE='
+    path = ''
     
