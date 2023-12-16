@@ -5,8 +5,6 @@ import logging
 from datetime import datetime
 from aiogram.types import ParseMode
 from aiogram import Bot, exceptions
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
 
 from app import bot
 from database import sqlDB
@@ -155,24 +153,3 @@ async def update_database():
 
         sqlDB.Tasks.base_init(dataDB)
         await asyncio.sleep(300)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        

@@ -113,10 +113,11 @@ async def user_change(call: types.CallbackQuery, state: FSMContext):
     logging.info(f"{call.from_user.id} - user change")
     
     user: sqlDB.User = sqlDB.User.basic_auth(chat_id = call.from_user.id)
-    user.delete_instance()
+    if user:
+        user.delete_instance()
     
     user_data = await state.get_data()
-    await bot.answer_callback_query(call.id, text='Выход выполнен', show_alert=True, cache_time=10000)
+    await bot.answer_callback_query(call.id, text='Выход выполнен', show_alert=True, cache_time=9999999)
     await bot.edit_message_reply_markup(chat_id = call.from_user.id,
                                             message_id = user_data['start_msgID'],
                                             reply_markup=kb.StartMenu())       

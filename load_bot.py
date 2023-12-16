@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
-import os
 import config
-import logging
-import datetime
-
-
-from aiogram.utils import executor
-from database import sqlDB, DB1C
+import redis
 
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher

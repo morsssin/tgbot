@@ -189,15 +189,16 @@ class Tasks(BaseModel):
     additional_executors = TextField(null=True)
 
     @staticmethod
-    def base_init():
+    def base_init(dataDB=None):
         from database.DB1C import Database_1C
         from config import DATABASE_1C
 
-        try:
-            DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
-            dataDB = DB1C.tasks()
-        except:
-            logging.warning('Ошибки при загрузке БД')
+        if not dataDB:
+            try:
+                DB1C = Database_1C(DATABASE_1C.LOGIN, DATABASE_1C.PASS, auth=True)
+                dataDB = DB1C.tasks()
+            except:
+                logging.warning('Ошибки при загрузке БД')
 
         if isinstance(dataDB, dict):
             data = get_data_from_dataDB(dataDB)

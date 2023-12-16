@@ -142,7 +142,7 @@ class Database_1C:
         try:
             data = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
             r = self.session.get(self.url + '/tasks', auth=BasicAuth(self.login, self.password), params=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С'
                        
         check = check_connection(r)
@@ -156,7 +156,7 @@ class Database_1C:
     def users(self):
         try:
             r = self.session.get(self.url + '/users', auth=BasicAuth(self.login, self.password), timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         
         check = check_connection(r)
@@ -169,7 +169,7 @@ class Database_1C:
     def GetVariants(self, taskID: str): # DONE WORK
         try:
             r = self.session.get(self.url + '/getvariants', auth=BasicAuth(self.login, self.password), params={'id':taskID}, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С'        
                 
         check = check_connection(r)
@@ -183,7 +183,7 @@ class Database_1C:
 
         try:
             r = self.session.get(self.url + '/getroles', auth=BasicAuth(self.login, self.password), timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С'
                        
         check = check_connection(r)
@@ -210,7 +210,7 @@ class Database_1C:
     def GetRolesFull (self):
         try:
             r = self.session.get(self.url + '/getroles', auth=BasicAuth(self.login, self.password), timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С'
                        
         check = check_connection(r)
@@ -225,7 +225,7 @@ class Database_1C:
     def GetFiles(self, taskID: str): # DONE WORK
         try:
             r = self.session.get(self.url + '/getfiles', auth=BasicAuth(self.login, self.password), params={'id':taskID}, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
             
         check = check_connection(r)
@@ -241,7 +241,7 @@ class Database_1C:
         data = {"id" : taskID, 'Accept' : accept}
         try:
             r = self.session.post(self.url + '/setaccept', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -250,7 +250,7 @@ class Database_1C:
         data = {"id": taskID, "Comment": comment, "user": user}
         try:
             r = self.session.post(self.url + '/setcomment', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -258,7 +258,7 @@ class Database_1C:
         data = {"id": taskID, "file": file64, "name": file_name, 'extension': file_extension}
         try:
             r = self.session.post(self.url + '/setfile', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
         
@@ -266,7 +266,7 @@ class Database_1C:
         data = {"id": taskID, "user": user}
         try:
             r = self.session.post(self.url + '/setredirect', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -275,7 +275,7 @@ class Database_1C:
         data = {"id": taskID, "users": users}
         try:
             r = self.session.post(self.url + '/addusers', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -284,7 +284,7 @@ class Database_1C:
         data = {"id": taskID, "executor": user_encode}
         try:
             r = self.session.post(self.url + '/setexecutor', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)      
 
@@ -292,7 +292,7 @@ class Database_1C:
         data = {"id": taskID, "variant": chosen_variant[0], "variantstring": chosen_variant[1]}
         try:
             r = self.session.post(self.url + '/setvariant', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r)  
 
@@ -300,7 +300,7 @@ class Database_1C:
         data = {"id": taskID}
         try:
             r = self.session.post(self.url + '/setexecute', auth=BasicAuth(self.login, self.password), json=data, timeout=self.timeout, )
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout):
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
             return 'Отсутствует подключение к базе данных 1С' 
         return check_connection(r) 
 

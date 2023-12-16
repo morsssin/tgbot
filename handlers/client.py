@@ -180,7 +180,10 @@ async def full_list_move(call: types.CallbackQuery, state: FSMContext):
                                 reply_markup=kb.FiltersMenu()) 
     else:
         logging.warning(f"{call.from_user.id} - show filters - USER NOT FOUND")
-        return await bot.answer_callback_query(call.id, text = 'Пользователь не найден в базе данных. Пожалуйста, пройдите авторизацию.', show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)        
+        try:
+            return await bot.answer_callback_query(call.id, text = 'Пользователь не найден в базе данных. Пожалуйста, пройдите авторизацию.', show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+        except:
+            await send_alert(message=call, text='Комментарий сохранен.', time=3)
  
 ## Назад к фильтрам 
 async def back_to_filteres (call: types.CallbackQuery, state: FSMContext, callback_data: dict):
@@ -196,6 +199,9 @@ async def full_list_tasks(call: types.CallbackQuery, state: FSMContext, callback
     await del_files(call, state)
     
     user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
+    if not user:
+        mes_txt = 'Пользователь не найден в базе данных. Пожалуйста, пройдите авторизацию.'
+        return await bot.answer_callback_query(call.id, text=mes_txt, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
     logging.info(f"{call.from_user.id} {user.login_db} - show full list")
     
     text_mode = {'FULL' : {'text' : text(hbold('Входящие задачи:')), 'params' : {'Executed':'no', 
@@ -277,6 +283,10 @@ async def send_task_info(call: types.CallbackQuery, state: FSMContext, callback_
         taskID = user_data['taskID']
 
     user: sqlDB.User = sqlDB.User.basic_auth(call.from_user.id)
+    if not user:
+        mes_txt = 'Пользователь не найден в базе данных. Пожалуйста, пройдите авторизацию.'
+        return await bot.answer_callback_query(call.id, text=mes_txt, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+
     DB1C = Database_1C(user.login_db, user.password)
     dataDB = DB1C.tasks(params={'id' : taskID})[taskID]
     
@@ -736,10 +746,15 @@ async def option_accepted(call: types.CallbackQuery,  state: FSMContext):
         req = DB1C.SetVariant(user_data['taskID'], chosen_variant) 
     
     if req != None:
-        await bot.answer_callback_query(call.id, text=req, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
-        return
-       
-    await bot.answer_callback_query(call.id, text='Выполнено', show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+        try:
+            await bot.answer_callback_query(call.id, text=req, show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+            return
+        except:
+            pass
+    try:
+        await bot.answer_callback_query(call.id, text='Выполнено', show_alert=True, cache_time=BOT_SETTINGS.CACHE_TIME)
+    except:
+        pass
     
     # await bot.delete_message(chat_id=call.from_user.id, message_id=call.message.message_id)
     await del_files(call, state)

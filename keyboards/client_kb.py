@@ -122,7 +122,7 @@ class TaskActionMenu(InlineKeyboardMarkup):
             self.add(self.but1, self.but2, self.but6)
         
         elif (done == 'Да')|(is_executor == False):
-            self.add(self.but2).add(self.but6)       
+            self.add(self.but2).add(self.but6)
         else: 
             self.add(self.but3, self.but2, self.but4, self.but5, self.but6)
 
@@ -240,7 +240,7 @@ cancel_kb = InlineKeyboardMarkup()
 cancel_button = InlineKeyboardButton('❌ Отмена', callback_data='cancel_call_b')
 cancel_kb.add(cancel_button)
 
-### клафиатура принятия варианта
+### клавиатура принятия варианта
 option_kb = InlineKeyboardMarkup()
 accept_button = InlineKeyboardButton('✅ Принять', callback_data='accept_b')
 back_task_button = InlineKeyboardButton('◀️ Назад', callback_data='back_task')

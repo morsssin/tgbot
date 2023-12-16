@@ -10,13 +10,9 @@ from database import sqlDB, DB1C
 from load_bot import bot, dp
 
 import notifier
-import middleware
 import urllib3
 
-### Функции
 async def on_startup(dp):
-
-    
     DB1C.test_connection.ping()
     sqlDB.create_tables()
     logging.info('Bot loaded')
@@ -26,8 +22,6 @@ async def on_shutdown(dp):
     sqlDB.close_conn()
     await dp.storage.close()
     logging.info("DB Connection closed")
-    
-    # await bot.close()
 
 
 ### Запуск бота
@@ -35,7 +29,6 @@ if __name__ == "__main__":
     from handlers import client, auth
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    
     logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Logs')
     if not os.path.exists(logs_dir):
         os.makedirs(logs_dir)
@@ -46,22 +39,10 @@ if __name__ == "__main__":
      
     client.reg_handlers_client(dp)
     auth.reg_handlers_auth(dp)
-    dp.setup_middleware(middleware.Middleware())
-    
+
     loop = asyncio.get_event_loop()
     loop.create_task(notifier.run_service())
     loop.create_task(notifier.resend_notifications())
     loop.create_task(notifier.update_database())
-    
-   
+
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup, on_shutdown=on_shutdown)
-
-
-    # loop = asyncio.new_event_loop()
-    # tasks = [loop.create_task(notifier.run_service())]
-    # loop.run_forever()
-    
-
-        
-    
-
